@@ -1,0 +1,9 @@
+ebin/
+*.beam
+tags
+log/
+*.swp
+*.sublime-*
+.project
+.settings/*
+doc/html

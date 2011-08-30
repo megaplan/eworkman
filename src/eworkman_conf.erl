@@ -1,5 +1,5 @@
 %%%
-%%% ejobman_conf: functions for config
+%%% eworkman_conf: functions for config
 %%%
 %%% Copyright (c) 2011 Megaplan Ltd. (Russia)
 %%%
@@ -24,10 +24,10 @@
 %%% @author arkdro <arkdro@gmail.com>
 %%% @since 2011-07-15 10:00
 %%% @license MIT
-%%% @doc ejobman functions related to config file read, config processing
+%%% @doc eworkman functions related to config file read, config processing
 %%%
 
--module(ejobman_conf).
+-module(eworkman_conf).
 
 %%%----------------------------------------------------------------------------
 %%% Exports
@@ -47,7 +47,7 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--include("ejobman.hrl").
+-include("eworkman.hrl").
 
 %%%----------------------------------------------------------------------------
 %%% API
@@ -115,7 +115,7 @@ get_config(Default) ->
 -spec fill_config(list()) -> #ejm{}.
 
 fill_config(List) ->
-    Rses = ejobman_conf_rabbit:stuff_rabbit_with(List),
+    Rses = eworkman_conf_rabbit:stuff_rabbit_with(List),
     #ejm{
         rses = Rses,
         debug = proplists:get_value(debug, List, []),
@@ -162,7 +162,7 @@ get_worker_duration(List) ->
 -spec get_config_list(string()) -> list().
 
 get_config_list(Default) ->
-    case application:get_env('ejobman', 'CONFIG') of
+    case application:get_env('eworkman', 'CONFIG') of
         {ok, File} when is_list(File) ->
             mpln_misc_conf:read_config(File);
         {ok, A} when is_atom(A) ->

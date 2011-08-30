@@ -1,4 +1,4 @@
-EXT_MOD = ../amqp_client
+#EXT_MOD = ../amqp_client
 EXT_MOD_INCLUDES = $(EXT_MOD:%=%/include)
 INCLUDE_DIR = include
 INCLUDE_DIR += $(EXT_MOD_INCLUDES)

@@ -1,5 +1,5 @@
 %%%
-%%% ejobman_app: application for ejobman
+%%% eworkman_app: application for eworkman
 %%% 
 %%% Copyright (c) 2011 Megaplan Ltd. (Russia)
 %%%
@@ -22,12 +22,12 @@
 %%% SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author arkdro <arkdro@gmail.com>
-%%% @since 2011-07-15 10:00
+%%% @since 2011-08-30 17:00
 %%% @license MIT
-%%% @doc application for ejobman
+%%% @doc application for eworkman
 %%% 
 
--module(ejobman_app).
+-module(eworkman_app).
 -behaviour(application).
 
 %%%----------------------------------------------------------------------------
@@ -41,8 +41,8 @@
 %%%----------------------------------------------------------------------------
 
 start() ->
-    Res = ejobman_sup:start_link(),
-    error_logger:info_msg("app start res:~n~p~n", [Res]),
+    Res = eworkman_sup:start_link(),
+    error_logger:info_msg("~p app start res:~n~p~n", [?MODULE, Res]),
     Res
 .
 

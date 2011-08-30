@@ -1,6 +1,6 @@
 %%% 
-%%% ejobman_long_sup: supervisor for long-lasting workers
-%%% 
+%%% eworkman_sup: main supervisor
+%%%
 %%% Copyright (c) 2011 Megaplan Ltd. (Russia)
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,12 +22,12 @@
 %%% SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author arkdro <arkdro@gmail.com>
-%%% @since 2011-07-21 18:09
+%%% @since 2011-07-15 10:00
 %%% @license MIT
-%%% @doc a supervisor that spawns long-lasting workers
+%%% @doc main supervisor that spawns receiver, handler and child supervisor
 %%% 
 
--module(ejobman_long_sup).
+-module(eworkman_sup).
 -behaviour(supervisor).
 
 %%%----------------------------------------------------------------------------
@@ -40,22 +40,35 @@
 %%% Defines
 %%%----------------------------------------------------------------------------
 
--define(RESTARTS, 25).
--define(SECONDS, 5).
+-define(RESTARTS, 5).
+-define(SECONDS, 2).
 
 %%%----------------------------------------------------------------------------
 %%% supervisor callbacks
 %%%----------------------------------------------------------------------------
 init(_Args) ->
+    Worker = {
+        eworkman_worker, {eworkman_worker, start_link, []},
+        permanent, 1000, worker, [eworkman_worker]
+        },
+    Handler = {
+        eworkman_handler, {eworkman_handler, start_link, []},
+        permanent, 1000, worker, [eworkman_handler]
+        },
+    LSup = {
+        eworkman_long_sup, {eworkman_long_sup, start_link, []},
+        transient, infinity, supervisor, [eworkman_long_sup]
+        },
     {ok, {{one_for_one, ?RESTARTS, ?SECONDS},
-        []}}.
-
+        % LSup must be started before Handler
+        [LSup, Handler, Worker]}}.
 %%%----------------------------------------------------------------------------
-%%% api
+%%% API
 %%%----------------------------------------------------------------------------
+-spec start_link() -> any().
+%%
+%% @doc calls supervisor:start_link to create eworkman_supervisor
+%%
 start_link() ->
-    supervisor:start_link({local, ejobman_long_supervisor},
-        ejobman_long_sup,
-        []).
-
+    supervisor:start_link({local, eworkman_supervisor}, eworkman_sup, []).
 %%-----------------------------------------------------------------------------

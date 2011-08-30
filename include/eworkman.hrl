@@ -1,10 +1,10 @@
--ifndef(ejobman_params).
--define(ejobman_params, true).
+-ifndef(eworkman_params).
+-define(eworkman_params, true).
 
 -define(T, 1000).
 -define(TC, 0).
--define(LOG, "/var/log/erpher/ejm").
--define(CONF, "ejobman.conf").
+-define(LOG, "/var/log/erpher/ewm").
+-define(CONF, "eworkman.conf").
 
 % state of a worker gen_server
 -record(child, {

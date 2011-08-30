@@ -1,5 +1,5 @@
 %%% 
-%%% ejobman_worker_spawn: spawns one ejobman worker
+%%% eworkman_worker_spawn: spawns one eworkman worker
 %%%
 %%% Copyright (c) 2011 Megaplan Ltd. (Russia)
 %%%
@@ -24,11 +24,11 @@
 %%% @author arkdro <arkdro@gmail.com>
 %%% @since 2011-07-15 10:00
 %%% @license MIT
-%%% @doc spawns one ejobman worker
+%%% @doc spawns one eworkman worker
 %%% 
--module(ejobman_worker_spawn).
+-module(eworkman_worker_spawn).
 -export([spawn_one_worker/2]).
--include("ejobman.hrl").
+-include("eworkman.hrl").
 
 %%%----------------------------------------------------------------------------
 %%% API
@@ -43,13 +43,13 @@
 spawn_one_worker(C, Pool) ->
     Id = make_ref(),
     Child_config = make_child_config(Pool, Id),
-    StartFunc = {ejobman_long_worker, start_link, [Child_config]},
+    StartFunc = {eworkman_long_worker, start_link, [Child_config]},
     % for 'permanent' restart policy either worker or handler must contact
     % one another so handler keeps actual list of children. Or use gproc...
     % In the case of 'temporary' the handler does all the housekeeping
-    Child = {Id, StartFunc, temporary, 1000, worker, [ejobman_long_worker]},
+    Child = {Id, StartFunc, temporary, 1000, worker, [eworkman_long_worker]},
     Workers = Pool#pool.workers,
-    Res = supervisor:start_child(ejobman_long_supervisor, Child),
+    Res = supervisor:start_child(eworkman_long_supervisor, Child),
     mpln_p_debug:pr({?MODULE, 'real_spawn_one_worker res', ?LINE, Res},
         C#ejm.debug, run, 3),
     case Res of

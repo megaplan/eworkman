@@ -1,5 +1,5 @@
 %%%
-%%% ejobman_worker_misc: miscellaneous functions for worker pools
+%%% eworkman_worker_misc: miscellaneous functions for worker pools
 %%%
 %%% Copyright (c) 2011 Megaplan Ltd. (Russia)
 %%%
@@ -27,7 +27,7 @@
 %%% @doc miscellaneous functions for worker pools
 %%%
 
--module(ejobman_worker_misc).
+-module(eworkman_worker_misc).
 
 %%%----------------------------------------------------------------------------
 %%% Exports
@@ -44,7 +44,7 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--include("ejobman.hrl").
+-include("eworkman.hrl").
 
 %%%----------------------------------------------------------------------------
 %%% API
@@ -143,7 +143,7 @@ clear_pool_waiting_workers(St, #pool{restart_delay=Limit, waiting=Waiting} =
                 Delta =< Limit * 1000000
     end,
     {Found, Not_found} = lists:partition(F, Waiting),
-    lists:foreach(fun(_) -> ejobman_worker:add_worker(Pool#pool.id) end,
+    lists:foreach(fun(_) -> eworkman_handler:add_worker(Pool#pool.id) end,
         Not_found),
     mpln_p_debug:pr({?MODULE, 'clear_pool_waiting_workers', ?LINE,
         Pool#pool.id, Found, Not_found}, St#ejm.debug, run, 5),
@@ -196,7 +196,7 @@ spawn_workers(C, #pool{min_workers=N} = P) ->
 
 spawn_n_workers(State, Pool, N) ->
     lists:foldl(fun(_X, Pool_in) ->
-            {_, New} = ejobman_worker_spawn:spawn_one_worker(State, Pool_in),
+            {_, New} = eworkman_worker_spawn:spawn_one_worker(State, Pool_in),
             New
         end,
         Pool,
@@ -221,8 +221,8 @@ terminate_workers(#pool{workers = Workers}) ->
 terminate_one_worker(#chi{id=Id, mon=Mref}) ->
     % we don't need to monitor workers we stop manually
     erlang:demonitor(Mref),
-    supervisor:terminate_child(ejobman_long_supervisor, Id),
-    supervisor:delete_child(ejobman_long_supervisor, Id).
+    supervisor:terminate_child(eworkman_long_supervisor, Id),
+    supervisor:delete_child(eworkman_long_supervisor, Id).
 
 %%-----------------------------------------------------------------------------
 %%
@@ -259,7 +259,7 @@ crashed_pid_action(Pool, Obj, Acc) ->
             Now = now(),
             [{Obj, Now} | Acc];
         restart ->
-            ejobman_worker:add_worker(Pool#pool.id),
+            eworkman_handler:add_worker(Pool#pool.id),
             Acc;
         _ ->
             Acc
@@ -334,7 +334,7 @@ fetch_worker_os_pids(#ejm{w_pools = Pools} = St) ->
 %%
 fetch_pool_os_pids(#pool{workers=Workers} = Pool) ->
     F = fun (#chi{pid=Pid, os_pid=undefined} = C) ->
-                Os_pid = ejobman_long_worker:get_os_pid(Pid),
+                Os_pid = eworkman_long_worker:get_os_pid(Pid),
                 C#chi{os_pid=Os_pid};
             (C) ->
                 C
@@ -350,8 +350,8 @@ fetch_pool_os_pids(#pool{workers=Workers} = Pool) ->
 
 restart_one_worker(St, #chi{id=Id, mon=Mref} = Orig) ->
     erlang:demonitor(Mref),
-    Res_t = supervisor:terminate_child(ejobman_long_supervisor, Id),
-    Res = supervisor:restart_child(ejobman_long_supervisor, Id),
+    Res_t = supervisor:terminate_child(eworkman_long_supervisor, Id),
+    Res = supervisor:restart_child(eworkman_long_supervisor, Id),
     mpln_p_debug:pr({?MODULE, 'restart_one_worker', ?LINE, Orig, Res_t, Res},
         St#ejm.debug, run, 3),
     case Res of

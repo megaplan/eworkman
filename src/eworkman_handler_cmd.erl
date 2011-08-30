@@ -1,5 +1,5 @@
 %%%
-%%% ejobman_handler_cmd: received command handling
+%%% eworkman_handler_cmd: received command handling
 %%% 
 %%% Copyright (c) 2011 Megaplan Ltd. (Russia)
 %%%
@@ -25,10 +25,10 @@
 %%% @since 2011-07-15 10:00
 %%% @license MIT
 %%% @doc functions that do real handling of the command received by
-%%% ejobman_handler
+%%% eworkman_handler
 %%%
 
--module(ejobman_handler_cmd).
+-module(eworkman_handler_cmd).
 
 %%%----------------------------------------------------------------------------
 %%% Exports
@@ -46,8 +46,8 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--include("ejobman.hrl").
--include("job.hrl").
+-include("eworkman.hrl").
+%-include("job.hrl").
 
 %%%----------------------------------------------------------------------------
 %%% API
@@ -59,7 +59,7 @@
 -spec add_pool(#ejm{}, list()) -> #ejm{}.
 
 add_pool(#ejm{w_pools = Pools} = St, List) ->
-    Pool = ejobman_conf:fill_one_pool_config(List),
+    Pool = eworkman_conf:fill_one_pool_config(List),
     St#ejm{w_pools = [Pool | Pools]}.
 
 %%-----------------------------------------------------------------------------
@@ -207,7 +207,7 @@ check_one_long_command(St, #pool{w_queue = Q} = Pool) ->
 -spec do_one_long_command(#ejm{}, #pool{}, tuple()) -> #pool{}.
 
 do_one_long_command(St, Pool, Item) ->
-    {Ref, New_pool} = ejobman_worker_spawn:spawn_one_worker(St, Pool),
+    {Ref, New_pool} = eworkman_worker_spawn:spawn_one_worker(St, Pool),
     case Ref of
         error ->
             mpln_p_debug:pr({?MODULE, 'do_one_long_command error', ?LINE},
@@ -216,7 +216,7 @@ do_one_long_command(St, Pool, Item) ->
         _ ->
             Pid = find_pid(New_pool, Ref),
             % TODO: use catch and/or timeout
-            ejobman_long_worker:cmd(Pid, Item)
+            eworkman_long_worker:cmd(Pid, Item)
     end,
     New_pool.
 
@@ -268,7 +268,7 @@ check_one_command(#ejm{ch_queue = Q} = St) ->
 do_one_command(St, {From, J}) ->
     mpln_p_debug:pr({?MODULE, 'do_one_command cmd', ?LINE, From, J},
         St#ejm.debug, run, 4),
-    % parameters for ejobman_child
+    % parameters for eworkman_child
     Child_params = [
         {url_rewrite, St#ejm.url_rewrite},
         {from, From},
@@ -279,7 +279,7 @@ do_one_command(St, {From, J}) ->
         {auth, J#job.auth},
         {debug, St#ejm.debug}
         ],
-    Res = supervisor:start_child(ejobman_child_supervisor, [Child_params]),
+    Res = supervisor:start_child(eworkman_child_supervisor, [Child_params]),
     mpln_p_debug:pr({?MODULE, 'do_one_command res', ?LINE, Res},
         St#ejm.debug, run, 4),
     case Res of

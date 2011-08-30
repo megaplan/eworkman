@@ -1,5 +1,5 @@
 %%%
-%%% ejobman_long_worker: dynamically added worker
+%%% eworkman_long_worker: dynamically added worker
 %%% 
 %%% Copyright (c) 2011 Megaplan Ltd. (Russia)
 %%%
@@ -27,7 +27,7 @@
 %%% @doc dynamically added worker that does the real thing.
 %%%
 
--module(ejobman_long_worker).
+-module(eworkman_long_worker).
 -behaviour(gen_server).
 
 %%%----------------------------------------------------------------------------
@@ -48,7 +48,7 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--include("ejobman.hrl").
+-include("eworkman.hrl").
 %-include("amqp_client.hrl").
 
 -define(HTTP_TIMEOUT, 15000).
@@ -57,7 +57,7 @@
 %%% gen_server callbacks
 %%%----------------------------------------------------------------------------
 init(Params) ->
-    C = ejobman_conf:get_config_child(Params),
+    C = eworkman_conf:get_config_child(Params),
     New = add_port(C),
     % to catch exit on port close by external process. Is it really necessary?
     process_flag(trap_exit, true),
@@ -94,7 +94,7 @@ handle_call({cmd, Job}, _From, St) ->
     process_cmd(St, Job),
     New = do_smth(St),
     % 'ok' reply goes to the caller of gen_server api
-    % (ejobman_handler_cmd:do_one_long_command). The real requestor is in
+    % (eworkman_handler_cmd:do_one_long_command). The real requestor is in
     % the From field of the Job tuple.
     {reply, ok, New, ?T};
 handle_call(status, _From, St) ->
@@ -233,7 +233,7 @@ process_cmd(St, {From, Method, Url}) ->
 real_cmd(#child{method = Method_bin, url = Url, from = From} = St) ->
     mpln_p_debug:pr({?MODULE, 'process_cmd params', ?LINE, St#child.id,
         Method_bin, Url, From}, St#child.debug, run, 3),
-    Method = ejobman_clean:get_method(Method_bin),
+    Method = eworkman_clean:get_method(Method_bin),
     Res = http:request(Method, {Url, []},
         [{timeout, ?HTTP_TIMEOUT}, {connect_timeout, ?HTTP_TIMEOUT}],
         []),

@@ -5,7 +5,6 @@
     {modules, [
         eworkman_app,
         eworkman_conf,
-        eworkman_handler_cmd,
         eworkman_handler,
         eworkman_long_sup,
         eworkman_long_worker,

@@ -34,10 +34,9 @@
 %%%----------------------------------------------------------------------------
 
 -export([get_config/1]).
--export([get_config_hdl/1]).
 -export([get_config_worker/1]).
--export([get_config_child/1]).
 -export([fill_one_pool_config/1]).
+-export([get_config_child/1]).
 
 %%%----------------------------------------------------------------------------
 %%% Includes
@@ -53,54 +52,37 @@
 %%% API
 %%%----------------------------------------------------------------------------
 %%
-%% @doc fills in the child config with values from input list.
-%% @since 2011-07-15
+%% @doc fills in the child (a worker, actually) config with values from
+%% the input list
+%% @since 2011-08-31 12:18
 %%
 -spec get_config_child(list()) -> #child{}.
 
 get_config_child(List) ->
     #child{
-        url_rewrite = proplists:get_value(url_rewrite, List, []),
         name = proplists:get_value(name, List),
         id = proplists:get_value(id, List),
-        from = proplists:get_value(from, List),
-        method = proplists:get_value(method, List, <<>>),
-        url = proplists:get_value(url, List, <<>>),
-        host = proplists:get_value(host, List),
-        auth = proplists:get_value(auth, List),
-        params = proplists:get_value(params, List, []),
         debug = proplists:get_value(debug, List, [])
     }.
 
 %%-----------------------------------------------------------------------------
 %%
-%% @doc reads config file, fills in ejm record with configured values
+%% @doc reads config file, fills in ewm record with configured values
 %% @since 2011-08-29 14:09
 %%
--spec get_config_worker(string()) -> #ejm{}.
+-spec get_config_worker(string()) -> #ewm{}.
 
 get_config_worker(Default) ->
     List = get_config_list(Default),
-    fill_ejm_worker_config(List).
+    fill_ewm_worker_config(List).
 
 %%-----------------------------------------------------------------------------
 %%
-%% @doc reads config file, fills in ejm record with configured values
-%% @since 2011-07-15
-%%
--spec get_config_hdl(string()) -> #ejm{}.
-
-get_config_hdl(Default) ->
-    List = get_config_list(Default),
-    fill_ejm_handler_config(List).
-
-%%-----------------------------------------------------------------------------
-%%
-%% @doc reads config file for receiver, fills in ejm record with configured
+%% @doc reads config file for receiver, fills in ewm record with configured
 %% values
 %% @since 2011-07-15
 %%
--spec get_config(string()) -> #ejm{}.
+-spec get_config(string()) -> #ewm{}.
 
 get_config(Default) ->
     List = get_config_list(Default),
@@ -109,15 +91,13 @@ get_config(Default) ->
 %%-----------------------------------------------------------------------------
 %%
 %% @doc gets data from the list of key-value tuples and stores it into
-%% ejm record
+%% ewm record
 %% @since 2011-07-15
 %%
--spec fill_config(list()) -> #ejm{}.
+-spec fill_config(list()) -> #ewm{}.
 
 fill_config(List) ->
-    Rses = eworkman_conf_rabbit:stuff_rabbit_with(List),
-    #ejm{
-        rses = Rses,
+    #ewm{
         debug = proplists:get_value(debug, List, []),
         log = proplists:get_value(log, List, ?LOG)
     }.
@@ -131,7 +111,6 @@ fill_one_pool_config(List) ->
         id = proplists:get_value(id, List),
         worker_config = proplists:get_value(worker, List, []),
         workers = [],
-        w_queue = queue:new(),
         w_duration = get_worker_duration(List),
         restart_policy = proplists:get_value(restart_policy, List),
         restart_delay = proplists:get_value(restart_delay, List, 10),
@@ -186,31 +165,15 @@ fill_pools_config(List) ->
 %% @doc creates a worker config
 %% @since 2011-08-29 14:15
 %%
--spec fill_ejm_worker_config(list()) -> #ejm{}.
+-spec fill_ewm_worker_config(list()) -> #ewm{}.
 
-fill_ejm_worker_config(List) ->
-    Hdl_list = proplists:get_value(ll_worker, List, []),
-    Pools = fill_pools_config(Hdl_list),
-    Web = fill_web_config(Hdl_list),
-    Web#ejm{
+fill_ewm_worker_config(List) ->
+    Pools = fill_pools_config(List),
+    Web = fill_web_config(List),
+    Web#ewm{
         w_pools = Pools,
-        debug = proplists:get_value(debug, Hdl_list, [])
-    }.
-
-%%-----------------------------------------------------------------------------
-%%
-%% @doc creates a handler config
-%%
--spec fill_ejm_handler_config(list()) -> #ejm{}.
-
-fill_ejm_handler_config(List) ->
-    Hdl_list = proplists:get_value(handler, List, []),
-    #ejm{
-        ch_data = [],
-        ch_queue = queue:new(),
-        url_rewrite = proplists:get_value(url_rewrite, Hdl_list, []),
-        max_children = proplists:get_value(max_children, Hdl_list, 32767),
-        debug = proplists:get_value(debug, Hdl_list, [])
+        log = proplists:get_value(log, List, ?LOG),
+        debug = proplists:get_value(debug, List, [])
     }.
 
 %%-----------------------------------------------------------------------------
@@ -218,7 +181,7 @@ fill_ejm_handler_config(List) ->
 %% @doc gets web server parameters and stores them in the config record
 %%
 fill_web_config(List) ->
-    #ejm{
+    #ewm{
         web_server_opts = proplists:get_value(web_server_opts, List, [])
     }.
 
@@ -227,62 +190,11 @@ fill_web_config(List) ->
 %%%----------------------------------------------------------------------------
 -ifdef(TEST).
 fill_config_test() ->
-    #ejm{rses=_, debug=[], log=?LOG} = fill_config([]),
-    #ejm{rses=_, debug=[{info, 5}, {run, 2}], log=?LOG} =
+    #ewm{debug=[], log=?LOG} = fill_config([]),
+    #ewm{debug=[{info, 5}, {run, 2}], log=?LOG} =
     fill_config([
         {debug, [{info, 5}, {run, 2}]}
         ]).
-
-%%-----------------------------------------------------------------------------
-get_test_config() ->
-[
-{handler, [
-    {url_rewrite, [
-        [
-            {src_url, "192.168.9.183"},
-            {dst_host, "promo.megaplan.kulikov"}
-        ],
-        [
-            {src_url, "promo.megaplan.kulikov"},
-            {dst_url, "192.168.9.183"},
-            {dst_host, "promo.megaplan.kulikov"}
-        ],
-        [
-            {src_type, regex},
-            {src_url, "127\.0\.0\.\d+"},
-            {dst_url, "127.0.0.1"},
-            {dst_host, "host3.localdomain"}
-        ]
-    ]},
-    {max_children, 7}, % to process short command
-    {debug,
-        [
-            {config, 4},
-            {store, 0},
-            {get, 4},
-            {run, 5},
-            {http, 0},
-            {ets, 3}
-        ]
-    }]},
-{log, "log/e"}
-].
-
-%%-----------------------------------------------------------------------------
-fill_ejm_config_test() ->
-    Config = get_test_config(),
-    C = fill_ejm_handler_config(Config),
-    C2 = [[{src_url,"192.168.9.183"},
-         {dst_host,"promo.megaplan.kulikov"}],
-        [{src_url,"promo.megaplan.kulikov"},
-         {dst_url,"192.168.9.183"},
-         {dst_host,"promo.megaplan.kulikov"}],
-        [{src_type,regex},
-         {src_url,[49,50,55,46,48,46,48,46,127,43]},
-         {dst_url,"127.0.0.1"},
-         {dst_host,"host3.localdomain"}]],
-    ?assert(C#ejm.url_rewrite =:= C2)
-.
 
 %%-----------------------------------------------------------------------------
 get_test_config_2() ->
@@ -351,13 +263,12 @@ get_test_config_2() ->
 ].
 
 %%-----------------------------------------------------------------------------
-fill_ejm_handler_config_test() ->
+fill_ewm_handler_config_test() ->
     Config = get_test_config_2(),
-    C = fill_ejm_handler_config(Config),
-    C2 = #ejm{
+    C = fill_ewm_worker_config(Config),
+    C2 = #ewm{
         w_pools = [
             #pool{
-                w_queue = queue:new(),
                 id=p4,
                 min_workers=1,
                 restart_policy=delay,
@@ -373,7 +284,6 @@ fill_ejm_handler_config_test() ->
                     }]
             },
             #pool{
-                w_queue = queue:new(),
                 id=p1,
                 min_workers=1,
                 restart_policy=delay,
@@ -389,7 +299,6 @@ fill_ejm_handler_config_test() ->
                     }]
             },
             #pool{
-                w_queue = queue:new(),
                 id=p3,
                 min_workers=1,
                 restart_policy=delay,
@@ -404,7 +313,6 @@ fill_ejm_handler_config_test() ->
                     }]
             },
             #pool{
-                w_queue = queue:new(),
                 id=p2,
                 min_workers=2,
                 w_duration=0,
@@ -420,7 +328,7 @@ fill_ejm_handler_config_test() ->
             }
         ]
     },
-    ?assert(C#ejm.w_pools =:= C2#ejm.w_pools).
+    ?assert(C#ewm.w_pools =:= C2#ewm.w_pools).
 
 -endif.
 %%-----------------------------------------------------------------------------

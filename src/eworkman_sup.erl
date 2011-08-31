@@ -47,10 +47,6 @@
 %%% supervisor callbacks
 %%%----------------------------------------------------------------------------
 init(_Args) ->
-    Worker = {
-        eworkman_worker, {eworkman_worker, start_link, []},
-        permanent, 1000, worker, [eworkman_worker]
-        },
     Handler = {
         eworkman_handler, {eworkman_handler, start_link, []},
         permanent, 1000, worker, [eworkman_handler]
@@ -61,7 +57,7 @@ init(_Args) ->
         },
     {ok, {{one_for_one, ?RESTARTS, ?SECONDS},
         % LSup must be started before Handler
-        [LSup, Handler, Worker]}}.
+        [LSup, Handler]}}.
 %%%----------------------------------------------------------------------------
 %%% API
 %%%----------------------------------------------------------------------------

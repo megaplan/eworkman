@@ -38,7 +38,7 @@
 %% returns the modified pool.
 %% @since 2011-07-21 18:00
 %%
--spec spawn_one_worker(#ejm{}, #pool{}) -> {reference() | error, #pool{}}.
+-spec spawn_one_worker(#ewm{}, #pool{}) -> {reference() | error, #pool{}}.
 
 spawn_one_worker(C, Pool) ->
     Id = make_ref(),
@@ -51,7 +51,7 @@ spawn_one_worker(C, Pool) ->
     Workers = Pool#pool.workers,
     Res = supervisor:start_child(eworkman_long_supervisor, Child),
     mpln_p_debug:pr({?MODULE, 'real_spawn_one_worker res', ?LINE, Res},
-        C#ejm.debug, run, 3),
+        C#ewm.debug, run, 3),
     case Res of
         {ok, Pid} ->
             Mref = erlang:monitor(process, Pid),

@@ -59,31 +59,26 @@ init(Config) ->
     application:start(inets),
     application:start(ssl),
     C = eworkman_conf:get_config_worker(Config),
+    mpln_misc_log:prepare_log(C#ewm.log),
     Conf_w = eworkman_worker_web:prepare_web(C),
     New = eworkman_worker_misc:prepare_workers(Conf_w),
     % trap_exit is unnecessary. Children are ripped by supervisor
     %process_flag(trap_exit, true),
-    mpln_p_debug:pr({?MODULE, 'init done', ?LINE}, New#ejm.debug, run, 1),
+    mpln_p_debug:pr({?MODULE, 'init done', ?LINE}, New#ewm.debug, run, 1),
     {ok, New, ?T}.
 %%-----------------------------------------------------------------------------
 %%
 %% Handling call messages
 %% @since 2011-08-29 11:00
 %%
--spec handle_call(any(), any(), #ejm{}) ->
-    {noreply, #ejm{}, non_neg_integer()}
-    | {any(), any(), #ejm{}, non_neg_integer()}.
-
-%% @doc calls long-lasting worker
-handle_call({cmd2, Method, Url}, From, St) ->
-    St_d = do_smth(St),
-    New = eworkman_handler_cmd:do_worker_cmd(St_d, From, Method, Url),
-    {noreply, New, ?T};
+-spec handle_call(any(), any(), #ewm{}) ->
+    {stop, normal, ok, #ewm{}}
+    | {reply, any(), #ewm{}, non_neg_integer()}.
 
 %% @doc adds a new pool
 handle_call({add_pool, Pool}, _From, St) ->
     St_d = do_smth(St),
-    New = eworkman_handler_cmd:add_pool(St_d, Pool),
+    New = eworkman_worker_misc:add_pool(St_d, Pool),
     {reply, ok, New, ?T};
 
 handle_call(stop, _From, St) ->
@@ -95,7 +90,7 @@ handle_call(status2, _From, St) ->
 handle_call(status, _From, St) ->
     {reply, St, St, ?T};
 handle_call(_N, _From, St) ->
-    mpln_p_debug:pr({?MODULE, 'other', ?LINE, _N}, St#ejm.debug, run, 3),
+    mpln_p_debug:pr({?MODULE, 'other', ?LINE, _N}, St#ewm.debug, run, 3),
     New = do_smth(St),
     {reply, {error, unknown_request}, New, ?T}.
 %%-----------------------------------------------------------------------------
@@ -103,7 +98,7 @@ handle_call(_N, _From, St) ->
 %% Handling cast messages
 %% @since 2011-08-29 11:00
 %%
--spec handle_cast(any(), #ejm{}) -> any().
+-spec handle_cast(any(), #ewm{}) -> any().
 
 handle_cast(stop, St) ->
     {stop, normal, St};
@@ -111,12 +106,12 @@ handle_cast(st0p, St) ->
     St;
 handle_cast({add_worker, Pool_id}, St) ->
     mpln_p_debug:pr({?MODULE, 'cast add_worker', ?LINE, Pool_id},
-        St#ejm.debug, run, 4),
+        St#ewm.debug, run, 4),
     St_w = eworkman_worker_misc:throw_worker_pools(St, Pool_id),
     New = do_smth(St_w),
     {noreply, New, ?T};
 handle_cast(_N, St) ->
-    mpln_p_debug:pr({?MODULE, 'cast other', ?LINE, _N}, St#ejm.debug, run, 3),
+    mpln_p_debug:pr({?MODULE, 'cast other', ?LINE, _N}, St#ewm.debug, run, 3),
     New = do_smth(St),
     {noreply, New, ?T}.
 %%-----------------------------------------------------------------------------
@@ -124,28 +119,28 @@ handle_cast(_N, St) ->
 %% @doc Note: it won't be called unless trap_exit is set
 %%
 terminate(_, State) ->
-    mochiweb_http:stop(State#ejm.web_server_pid),
+    mochiweb_http:stop(State#ewm.web_server_pid),
     eworkman_worker_misc:remove_workers(State),
-    mpln_p_debug:pr({?MODULE, 'terminate', ?LINE}, State#ejm.debug, run, 1),
+    mpln_p_debug:pr({?MODULE, 'terminate', ?LINE}, State#ewm.debug, run, 1),
     ok.
 %%-----------------------------------------------------------------------------
 %%
 %% Handling all non call/cast messages
 %% @since 2011-08-29 11:00
 %%
--spec handle_info(any(), #ejm{}) -> {noreply, #ejm{}, non_neg_integer()}.
+-spec handle_info(any(), #ewm{}) -> {noreply, #ewm{}, non_neg_integer()}.
 
 handle_info({'DOWN', Mref, _, Oid, _Info}=Msg, State) ->
-    mpln_p_debug:pr({?MODULE, info_down, ?LINE, Msg}, State#ejm.debug, run, 2),
+    mpln_p_debug:pr({?MODULE, info_down, ?LINE, Msg}, State#ewm.debug, run, 2),
     St_w = eworkman_worker_misc:handle_crashed(State, Mref, Oid),
     New = do_smth(St_w),
     {noreply, New, ?T};
 handle_info(timeout, State) ->
-    mpln_p_debug:pr({?MODULE, info_timeout, ?LINE}, State#ejm.debug, run, 6),
+    mpln_p_debug:pr({?MODULE, info_timeout, ?LINE}, State#ewm.debug, run, 6),
     New = do_smth(State),
     {noreply, New, ?T};
 handle_info(_Req, State) ->
-    mpln_p_debug:pr({?MODULE, other, ?LINE, _Req}, State#ejm.debug, run, 3),
+    mpln_p_debug:pr({?MODULE, other, ?LINE, _Req}, State#ewm.debug, run, 3),
     New = do_smth(State),
     {noreply, New, ?T}.
 %%-----------------------------------------------------------------------------
@@ -247,21 +242,11 @@ get_status2() ->
 %% @doc does miscellaneous periodic checks. E.g.: check for workers. Returns
 %% updated state.
 %%
--spec do_smth(#ejm{}) -> #ejm{}.
+-spec do_smth(#ewm{}) -> #ewm{}.
 
 do_smth(State) ->
-    mpln_p_debug:pr({?MODULE, 'do_smth', ?LINE}, State#ejm.debug, run, 5),
-    Stw = eworkman_worker_misc:check_workers(State),
-    check_queued_commands(Stw).
-
-%%-----------------------------------------------------------------------------
-%%
-%% @doc calls to process all the queued commands
-%%
--spec check_queued_commands(#ejm{}) -> #ejm{}.
-
-check_queued_commands(St) ->
-    eworkman_handler_cmd:all_pools_long_command(St).
+    mpln_p_debug:pr({?MODULE, 'do_smth', ?LINE}, State#ewm.debug, run, 5),
+    eworkman_worker_misc:check_workers(State).
 
 %%-----------------------------------------------------------------------------
 get_status(St) ->

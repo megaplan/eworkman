@@ -52,15 +52,15 @@
 %% @doc prepare web server which is used to serve worker monitoring page only
 %% @since 2011-08-17 13:40
 %%
--spec prepare_web(#ejm{}) -> #ejm{}.
+-spec prepare_web(#ewm{}) -> #ewm{}.
 
 prepare_web(C) ->
-    case C#ejm.web_server_opts of
+    case C#ewm.web_server_opts of
         [_|_] ->
-            List = proplists:delete(loop, C#ejm.web_server_opts),
+            List = proplists:delete(loop, C#ewm.web_server_opts),
             Opts = [{loop, {?MODULE, dispatch, [C]}} | List],
             {ok, Https} = mochiweb_http:start(Opts),
-            C#ejm{web_server_pid = Https};
+            C#ewm{web_server_pid = Https};
         _ ->
             C
     end.
@@ -70,16 +70,16 @@ prepare_web(C) ->
 %% @doc dispatcher for web requests
 %% @since 2011-08-17 13:40
 %%
--spec dispatch(any(), #ejm{}) -> any().
+-spec dispatch(any(), #ewm{}) -> any().
 
 dispatch(Req, C) ->
-    mpln_p_debug:pr({?MODULE, dispatch, ?LINE, Req}, C#ejm.debug, http, 5),
+    mpln_p_debug:pr({?MODULE, dispatch, ?LINE, Req}, C#ewm.debug, http, 5),
     case Req:get(method) of
         'GET' ->
             Path = Req:get(path),
             Type = get_query_type(Req),
             mpln_p_debug:pr({?MODULE, dispatch, ?LINE, Path, Type},
-                C#ejm.debug, http, 5),
+                C#ewm.debug, http, 5),
             get_resource(C, Req, Path, Type);
         _ ->
             Headers = [{"Allow", "GET"}],
@@ -93,16 +93,16 @@ dispatch(Req, C) ->
 %% @doc gets status2 from eworkman_worker and sends it as plain text response
 %% to the client of the web server
 %%
--spec get_resource(#ejm{}, any(), any(), any()) -> any().
+-spec get_resource(#ewm{}, any(), any(), any()) -> any().
 
 get_resource(C, Req, "/status2", "full") ->
     Res = eworkman_handler:get_status2(),
-    mpln_p_debug:pr({?MODULE, dispatch, ?LINE, Res}, C#ejm.debug, http, 4),
+    mpln_p_debug:pr({?MODULE, dispatch, ?LINE, Res}, C#ewm.debug, http, 4),
     Response = eworkman_worker_web_page:create_plain_status(Res),
     Req:ok(Response);
 get_resource(C, Req, "/status2", _Type) ->
     Res = eworkman_handler:get_status2(),
-    mpln_p_debug:pr({?MODULE, dispatch, ?LINE, Res}, C#ejm.debug, http, 4),
+    mpln_p_debug:pr({?MODULE, dispatch, ?LINE, Res}, C#ewm.debug, http, 4),
     Response = eworkman_worker_web_page:create_html_status(Res),
     Req:ok(Response);
 get_resource(_C, Req, _Path, _Type) ->

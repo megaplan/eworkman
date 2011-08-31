@@ -12,14 +12,6 @@
     port,
     id,
     os_pid,
-    duration,
-    from,
-    method,
-    url,
-    host,
-    auth,
-    url_rewrite,
-    params,
     debug
 }).
 
@@ -39,21 +31,14 @@
     waiting = [], % waiting for restart
     restart_delay,
     restart_policy, % restart, none, delay
-    w_queue,
     min_workers = 5
 }).
 
-% state of a handler and a receiver gen_server
--record(ejm, {
+% state of a workers handler
+-record(ewm, {
     w_pools = [],
-    ch_data, % spawned children
-    ch_queue,
-    max_children = 32767,
-    url_rewrite,
     web_server_pid,
     web_server_opts,
-    rses,
-    conn,
     log,
     debug
 }).

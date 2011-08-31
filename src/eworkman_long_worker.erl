@@ -49,7 +49,6 @@
 -endif.
 
 -include("eworkman.hrl").
-%-include("amqp_client.hrl").
 
 -define(HTTP_TIMEOUT, 15000).
 
@@ -88,15 +87,6 @@ handle_call({cmd2, Job}, _From, St) ->
 handle_call(stop, _From, St) ->
     catch port_close(St#child.port),
     {stop, normal, ok, St};
-handle_call({cmd, Job}, _From, St) ->
-    mpln_p_debug:pr({?MODULE, 'cmd', ?LINE, Job, St#child.id},
-        St#child.debug, run, 4),
-    process_cmd(St, Job),
-    New = do_smth(St),
-    % 'ok' reply goes to the caller of gen_server api
-    % (eworkman_handler_cmd:do_one_long_command). The real requestor is in
-    % the From field of the Job tuple.
-    {reply, ok, New, ?T};
 handle_call(status, _From, St) ->
     {reply, St, St, ?T};
 handle_call(_N, _From, St) ->
@@ -221,26 +211,6 @@ get_os_pid(Pid) ->
 do_smth(State) ->
     State.
 
-%%-----------------------------------------------------------------------------
-%%
-%% @doc processes received command. Returns result to the real requestor
-%% @todo make it async
-%%
-process_cmd(St, {From, Method, Url}) ->
-    real_cmd(St#child{method=Method, url=Url, from=From})
-.
-%%-----------------------------------------------------------------------------
-real_cmd(#child{method = Method_bin, url = Url, from = From} = St) ->
-    mpln_p_debug:pr({?MODULE, 'process_cmd params', ?LINE, St#child.id,
-        Method_bin, Url, From}, St#child.debug, run, 3),
-    Method = eworkman_clean:get_method(Method_bin),
-    Res = http:request(Method, {Url, []},
-        [{timeout, ?HTTP_TIMEOUT}, {connect_timeout, ?HTTP_TIMEOUT}],
-        []),
-    gen_server:reply(From, Res),
-    mpln_p_debug:pr({?MODULE, 'process_cmd res', ?LINE, St#child.id, Res},
-        St#child.debug, run, 4)
-.
 %%-----------------------------------------------------------------------------
 process_cmd2(St, stop) ->
     mpln_p_debug:pr({?MODULE, 'process_cmd2 close', ?LINE},

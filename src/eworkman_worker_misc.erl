@@ -35,6 +35,7 @@
 
 -export([check_workers/1, prepare_workers/1, throw_worker_pools/2]).
 -export([remove_workers/1, handle_crashed/3, get_process_info/1]).
+-export([add_pool/2]).
 
 %%%----------------------------------------------------------------------------
 %%% Includes
@@ -50,12 +51,25 @@
 %%% API
 %%%----------------------------------------------------------------------------
 %%
+%% @doc converts a proplist into a pool record. Adds the pool to worker
+%% pools. Spawns workers for the pool.
+%% @since 2011-08-03 14:32
+%%
+-spec add_pool(#ewm{}, list()) -> #ewm{}.
+
+add_pool(#ewm{w_pools = Pools} = St, List) ->
+    Pool = eworkman_conf:fill_one_pool_config(List),
+    New_pool = spawn_workers(St, Pool),
+    St#ewm{w_pools = [ New_pool | Pools ]}.
+
+%%-----------------------------------------------------------------------------
+%%
 %% @doc gets pools and processes info
 %% @since 2011-08-16 16:51
 %%
--spec get_process_info(#ejm{}) -> any().
+-spec get_process_info(#ewm{}) -> any().
 
-get_process_info(#ejm{w_pools = Pools}) ->
+get_process_info(#ewm{w_pools = Pools}) ->
     lists:map(fun get_process_one_pool/1, Pools).
 
 %%-----------------------------------------------------------------------------
@@ -63,7 +77,7 @@ get_process_info(#ejm{w_pools = Pools}) ->
 %% @doc checks for old workers and live workers, adds workers if necessary
 %% @since 2011-08-16 16:51
 %%
--spec check_workers(#ejm{}) -> #ejm{}.
+-spec check_workers(#ewm{}) -> #ewm{}.
 
 check_workers(St) ->
     Stw = clear_waiting_workers(St),
@@ -75,32 +89,32 @@ check_workers(St) ->
 %% @doc spawns the configured minimum of long-lasting workers
 %% @since 2011-08-16 16:51
 %%
--spec prepare_workers(#ejm{}) -> #ejm{}.
+-spec prepare_workers(#ewm{}) -> #ewm{}.
 
-prepare_workers(#ejm{w_pools = Pools} = C) ->
+prepare_workers(#ewm{w_pools = Pools} = C) ->
     New_pools = lists:map(fun(X) -> spawn_workers(C, X) end, Pools),
-    C#ejm{w_pools = New_pools}.
+    C#ewm{w_pools = New_pools}.
 
 %%-----------------------------------------------------------------------------
 %%
 %% @doc calls throw_worker_one_pool for every pool
 %% @since 2011-08-16 16:51
 %%
--spec throw_worker_pools(#ejm{}, any()) -> #ejm{}.
+-spec throw_worker_pools(#ewm{}, any()) -> #ewm{}.
 
-throw_worker_pools(#ejm{w_pools = Pools} = St, Id) ->
+throw_worker_pools(#ewm{w_pools = Pools} = St, Id) ->
     New_pools = lists:map(fun(X) -> throw_worker_one_pool(St, X, Id) end,
         Pools),
-    St#ejm{w_pools = New_pools}.
+    St#ewm{w_pools = New_pools}.
 
 %%-----------------------------------------------------------------------------
 %%
 %% @doc terminates all the workers in all the pools
 %% @since 2011-08-16 16:51
 %%
--spec remove_workers(#ejm{}) -> ok.
+-spec remove_workers(#ewm{}) -> ok.
 
-remove_workers(#ejm{w_pools = Pools}) ->
+remove_workers(#ewm{w_pools = Pools}) ->
     lists:foreach(fun terminate_workers/1, Pools).
 
 %%-----------------------------------------------------------------------------
@@ -108,12 +122,12 @@ remove_workers(#ejm{w_pools = Pools}) ->
 %% @doc calls handle_crashed_pid for every pool
 %% @since 2011-08-16 16:51
 %%
--spec handle_crashed(#ejm{}, reference(), any()) -> #ejm{}.
+-spec handle_crashed(#ewm{}, reference(), any()) -> #ewm{}.
 
-handle_crashed(#ejm{w_pools=Pools} = State, Mref, Obj) ->
+handle_crashed(#ewm{w_pools=Pools} = State, Mref, Obj) ->
     New_pools = lists:map(fun(X) -> handle_crashed_pid(State, X, Mref, Obj) end,
         Pools),
-    State#ejm{w_pools = New_pools}.
+    State#ewm{w_pools = New_pools}.
 
 %%%----------------------------------------------------------------------------
 %%% Internal functions
@@ -122,18 +136,18 @@ handle_crashed(#ejm{w_pools=Pools} = State, Mref, Obj) ->
 %% @doc clears old pids from restart waiting lists, so the new workers may
 %% be spawned later.
 %%
--spec clear_waiting_workers(#ejm{}) -> #ejm{}.
+-spec clear_waiting_workers(#ewm{}) -> #ewm{}.
 
-clear_waiting_workers(#ejm{w_pools = Pools} = St) ->
+clear_waiting_workers(#ewm{w_pools = Pools} = St) ->
     New_pools = lists:map(fun(X) -> clear_pool_waiting_workers(St, X) end,
         Pools),
-    St#ejm{w_pools = New_pools}.
+    St#ewm{w_pools = New_pools}.
 
 %%-----------------------------------------------------------------------------
 %%
 %% @doc clears old pids from the restart waiting list of a pool
 %%
--spec clear_pool_waiting_workers(#ejm{}, #pool{}) -> #pool{}.
+-spec clear_pool_waiting_workers(#ewm{}, #pool{}) -> #pool{}.
 
 clear_pool_waiting_workers(St, #pool{restart_delay=Limit, waiting=Waiting} =
         Pool) ->
@@ -146,7 +160,7 @@ clear_pool_waiting_workers(St, #pool{restart_delay=Limit, waiting=Waiting} =
     lists:foreach(fun(_) -> eworkman_handler:add_worker(Pool#pool.id) end,
         Not_found),
     mpln_p_debug:pr({?MODULE, 'clear_pool_waiting_workers', ?LINE,
-        Pool#pool.id, Found, Not_found}, St#ejm.debug, run, 5),
+        Pool#pool.id, Found, Not_found}, St#ewm.debug, run, 5),
     Pool#pool{waiting = Found}.
 
 %%-----------------------------------------------------------------------------
@@ -154,17 +168,17 @@ clear_pool_waiting_workers(St, #pool{restart_delay=Limit, waiting=Waiting} =
 %% @doc stops old workers for all the pools.
 %% Returns a new state with quite young workers only
 %%
--spec check_old_workers(#ejm{}) -> #ejm{}.
+-spec check_old_workers(#ewm{}) -> #ewm{}.
 
-check_old_workers(#ejm{w_pools = Pools} = St) ->
+check_old_workers(#ewm{w_pools = Pools} = St) ->
     New_pools = lists:map(fun(X) -> check_pool_old_workers(St, X) end, Pools),
-    St#ejm{w_pools = New_pools}
+    St#ewm{w_pools = New_pools}
 .
 %%-----------------------------------------------------------------------------
 %%
 %% @doc restarts too old workers. Returns the updated pool with new workers
 %%
--spec check_pool_old_workers(#ejm{}, #pool{}) -> #pool{}.
+-spec check_pool_old_workers(#ewm{}, #pool{}) -> #pool{}.
 
 check_pool_old_workers(St, Pool) ->
     F = fun(X) -> check_restart_old_worker(St, Pool#pool.w_duration, X) end,
@@ -173,7 +187,8 @@ check_pool_old_workers(St, Pool) ->
 
 %%-----------------------------------------------------------------------------
 %%
-%% @doc adds a worker for the appropriate pool if there is space for it
+%% @doc adds a worker for the appropriate pool if there is space for it.
+%% Returns either updated or untouched pool.
 %%
 throw_worker_one_pool(St, #pool{id=X} = Pool, Id) when X =:= Id ->
     spawn_n_workers(St, Pool, 1);
@@ -182,9 +197,10 @@ throw_worker_one_pool(_St, Pool, _) ->
 
 %%-----------------------------------------------------------------------------
 %%
-%% @doc spawns the configured for a pool a minimum number of workers
+%% @doc spawns the configured for a pool a minimum number of workers.
+%% Returns an updated pool.
 %%
--spec spawn_workers(#ejm{}, #pool{}) -> #pool{}.
+-spec spawn_workers(#ewm{}, #pool{}) -> #pool{}.
 
 spawn_workers(C, #pool{min_workers=N} = P) ->
     spawn_n_workers(C, P, N).
@@ -192,7 +208,7 @@ spawn_workers(C, #pool{min_workers=N} = P) ->
 %%
 %% @doc spawns N workers
 %%
--spec spawn_n_workers(#ejm{}, #pool{}, non_neg_integer()) -> #pool{}.
+-spec spawn_n_workers(#ewm{}, #pool{}, non_neg_integer()) -> #pool{}.
 
 spawn_n_workers(State, Pool, N) ->
     lists:foldl(fun(_X, Pool_in) ->
@@ -228,7 +244,7 @@ terminate_one_worker(#chi{id=Id, mon=Mref}) ->
 %%
 %% @doc performs pool restart policy based action for the crashed pid
 %%
--spec handle_crashed_pid(#ejm{}, #pool{}, reference(), any()) -> #pool{}.
+-spec handle_crashed_pid(#ewm{}, #pool{}, reference(), any()) -> #pool{}.
 
 handle_crashed_pid(St, #pool{waiting=Waiting, workers=Workers} =
         Pool, Mref, Obj) ->
@@ -243,7 +259,7 @@ handle_crashed_pid(St, #pool{waiting=Waiting, workers=Workers} =
     end,
     Wait_add = lists:foldl(F2, [], Found),
     mpln_p_debug:pr({?MODULE, handle_crashed_pid, ?LINE, Pool#pool.id,
-        Found, Not_found, Wait_add}, St#ejm.debug, run, 5),
+        Found, Not_found, Wait_add}, St#ewm.debug, run, 5),
     Pool#pool{waiting = Wait_add ++ Waiting, workers=Not_found}.
 
 %%-----------------------------------------------------------------------------
@@ -291,7 +307,6 @@ get_process_one_pool(#pool{} = P) ->
         {waiting, P#pool.waiting},
         {restart_delay, P#pool.restart_delay},
         {restart_policy, P#pool.restart_policy},
-        {queue_len, queue:len(P#pool.w_queue)},
         {min_workers, P#pool.min_workers}
     ]
 .
@@ -321,11 +336,11 @@ expand_one_worker(W) ->
 %%
 %% @doc fetch os_pids for all the pools
 %%
--spec fetch_worker_os_pids(#ejm{}) -> #ejm{}.
+-spec fetch_worker_os_pids(#ewm{}) -> #ewm{}.
 
-fetch_worker_os_pids(#ejm{w_pools = Pools} = St) ->
+fetch_worker_os_pids(#ewm{w_pools = Pools} = St) ->
     New_pools = lists:map(fun fetch_pool_os_pids/1, Pools),
-    St#ejm{w_pools = New_pools}.
+    St#ewm{w_pools = New_pools}.
 
 %%-----------------------------------------------------------------------------
 %%
@@ -346,14 +361,14 @@ fetch_pool_os_pids(#pool{workers=Workers} = Pool) ->
 %%
 %% @doc restarts one worker
 %%
--spec restart_one_worker(#ejm{}, #chi{}) -> any().
+-spec restart_one_worker(#ewm{}, #chi{}) -> any().
 
 restart_one_worker(St, #chi{id=Id, mon=Mref} = Orig) ->
     erlang:demonitor(Mref),
     Res_t = supervisor:terminate_child(eworkman_long_supervisor, Id),
     Res = supervisor:restart_child(eworkman_long_supervisor, Id),
     mpln_p_debug:pr({?MODULE, 'restart_one_worker', ?LINE, Orig, Res_t, Res},
-        St#ejm.debug, run, 3),
+        St#ewm.debug, run, 3),
     case Res of
         {ok, Pid} ->
             New_mref = erlang:monitor(process, Pid),
@@ -363,7 +378,7 @@ restart_one_worker(St, #chi{id=Id, mon=Mref} = Orig) ->
             #chi{pid=Pid, id=Id, start=now(), mon=New_mref};
         {error, Reason} ->
             mpln_p_debug:pr({?MODULE, 'restart_one_worker error', ?LINE,
-                Orig, Res_t, Reason}, St#ejm.debug, run, 0),
+                Orig, Res_t, Reason}, St#ewm.debug, run, 0),
             Orig
     end.
 
@@ -371,7 +386,7 @@ restart_one_worker(St, #chi{id=Id, mon=Mref} = Orig) ->
 %%
 %% @doc restarts the worker if it is too old
 %%
--spec check_restart_old_worker(#ejm{}, non_neg_integer(), #chi{}) -> #chi{}.
+-spec check_restart_old_worker(#ewm{}, non_neg_integer(), #chi{}) -> #chi{}.
 
 check_restart_old_worker(St, Dur, #chi{start=Start} = Worker) ->
     Now = now(),

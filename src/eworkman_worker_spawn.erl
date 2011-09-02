@@ -26,8 +26,19 @@
 %%% @license MIT
 %%% @doc spawns one eworkman worker
 %%% 
+
 -module(eworkman_worker_spawn).
--export([spawn_one_worker/2]).
+
+%%%----------------------------------------------------------------------------
+%%% Exports
+%%%----------------------------------------------------------------------------
+
+-export([spawn_one_worker/2, start_child/2]).
+
+%%%----------------------------------------------------------------------------
+%%% Includes
+%%%----------------------------------------------------------------------------
+
 -include("eworkman.hrl").
 
 %%%----------------------------------------------------------------------------
@@ -42,14 +53,8 @@
 
 spawn_one_worker(C, Pool) ->
     Id = make_ref(),
-    Child_config = make_child_config(Pool, Id),
-    StartFunc = {eworkman_long_worker, start_link, [Child_config]},
-    % for 'permanent' restart policy either worker or handler must contact
-    % one another so handler keeps actual list of children. Or use gproc...
-    % In the case of 'temporary' the handler does all the housekeeping
-    Child = {Id, StartFunc, temporary, 1000, worker, [eworkman_long_worker]},
     Workers = Pool#pool.workers,
-    Res = supervisor:start_child(eworkman_long_supervisor, Child),
+    Res = start_child(Pool, Id),
     mpln_p_debug:pr({?MODULE, 'real_spawn_one_worker res', ?LINE, Res},
         C#ewm.debug, run, 3),
     case Res of
@@ -64,6 +69,22 @@ spawn_one_worker(C, Pool) ->
         {error, _Reason} ->
             {error, Pool}
     end.
+
+%%-----------------------------------------------------------------------------
+%%
+%% @doc creates child spec and calls supervisor to start child.
+%% @since 2011-09-02 12:56
+%%
+-spec start_child(#pool{}, reference()) -> tuple().
+
+start_child(Pool, Id) ->
+    Child_config = make_child_config(Pool, Id),
+    StartFunc = {eworkman_long_worker, start_link, [Child_config]},
+    % for 'permanent' restart policy either worker or handler must contact
+    % one another so handler keeps actual list of children. Or use gproc...
+    % In the case of 'temporary' the handler does all the housekeeping
+    Child = {Id, StartFunc, temporary, 1000, worker, [eworkman_long_worker]},
+    supervisor:start_child(eworkman_long_supervisor, Child).
 
 %%%----------------------------------------------------------------------------
 %%% Internal functions

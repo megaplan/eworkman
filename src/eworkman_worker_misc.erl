@@ -181,7 +181,7 @@ check_old_workers(#ewm{w_pools = Pools} = St) ->
 -spec check_pool_old_workers(#ewm{}, #pool{}) -> #pool{}.
 
 check_pool_old_workers(St, Pool) ->
-    F = fun(X) -> check_restart_old_worker(St, Pool#pool.w_duration, X) end,
+    F = fun(X) -> check_restart_old_worker(St, Pool, X) end,
     New = lists:map(F, Pool#pool.workers),
     Pool#pool{workers=New}.
 
@@ -361,15 +361,18 @@ fetch_pool_os_pids(#pool{workers=Workers} = Pool) ->
 %%
 %% @doc restarts one worker
 %%
--spec restart_one_worker(#ewm{}, #chi{}) -> any().
+-spec restart_one_worker(#ewm{}, #pool{}, #chi{}) -> any().
 
-restart_one_worker(St, #chi{id=Id, mon=Mref} = Orig) ->
+restart_one_worker(St, Pool, #chi{id=Id, mon=Mref} = Orig) ->
     erlang:demonitor(Mref),
     P_info = process_info(Orig#chi.pid),
     Res_t = supervisor:terminate_child(eworkman_long_supervisor, Id),
-    Res = supervisor:restart_child(eworkman_long_supervisor, Id),
+    % restart_child doesn't work in r14b3
+    % Res = supervisor:restart_child(eworkman_long_supervisor, Id),
+    Res_d = supervisor:delete_child(eworkman_long_supervisor, Id),
+    Res = eworkman_worker_spawn:start_child(Pool, Id),
     mpln_p_debug:pr({?MODULE, 'restart_one_worker', ?LINE, Orig, Res_t,
-        Res, P_info}, St#ewm.debug, run, 3),
+        Res_d, Res, P_info}, St#ewm.debug, run, 3),
     case Res of
         {ok, Pid} ->
             New_mref = erlang:monitor(process, Pid),
@@ -387,13 +390,14 @@ restart_one_worker(St, #chi{id=Id, mon=Mref} = Orig) ->
 %%
 %% @doc restarts the worker if it is too old
 %%
--spec check_restart_old_worker(#ewm{}, non_neg_integer(), #chi{}) -> #chi{}.
+-spec check_restart_old_worker(#ewm{}, #pool{}, #chi{}) -> #chi{}.
 
-check_restart_old_worker(St, Dur, #chi{start=Start} = Worker) ->
+check_restart_old_worker(St, #pool{w_duration=Dur} = Pool,
+        #chi{start=Start} = Worker) ->
     Now = now(),
     Delta = timer:now_diff(Now, Start),
     if  Delta > Dur * 1000000 ->
-            restart_one_worker(St, Worker);
+            restart_one_worker(St, Pool, Worker);
         true ->
             Worker
     end.

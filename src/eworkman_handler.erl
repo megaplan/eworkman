@@ -55,11 +55,9 @@
 %%%----------------------------------------------------------------------------
 %%% gen_server callbacks
 %%%----------------------------------------------------------------------------
-init(Config) ->
-    application:start(inets),
-    application:start(ssl),
-    C = eworkman_conf:get_config_worker(Config),
-    mpln_misc_log:prepare_log(C#ewm.log),
+init(_) ->
+    C = eworkman_conf:get_config_worker(),
+    prepare_all(C),
     Conf_w = eworkman_worker_web:prepare_web(C),
     New = eworkman_worker_misc:prepare_workers(Conf_w),
     % trap_exit is unnecessary. Children are ripped by supervisor
@@ -251,5 +249,25 @@ do_smth(State) ->
 %%-----------------------------------------------------------------------------
 get_status(St) ->
     eworkman_worker_misc:get_process_info(St).
+
+%%-----------------------------------------------------------------------------
+%%
+%% @doc prepare all the things
+%%
+-spec prepare_all(#ewm{}) -> ok.
+
+prepare_all(C) ->
+    prepare_log(C).
+
+%%-----------------------------------------------------------------------------
+%%
+%% @doc prepare log if it is defined
+%%
+-spec prepare_log(#ewm{}) -> ok.
+
+prepare_log(#ewm{log=undefined}) ->
+    ok;
+prepare_log(#ewm{log=Log}) ->
+    mpln_misc_log:prepare_log(Log).
 
 %%-----------------------------------------------------------------------------

@@ -14,10 +14,7 @@
         eworkman_worker_web,
         eworkman_worker_web_page
     ]},
-    {registered, []},
-    {env, [
-        {'CONFIG', "/etc/erpher/eworkman.conf"}
-    ]},
+    {registered, [eworkman_handler, eworkman_long_supervisor]},
     {mod, {eworkman_app,[]}},
     {applications, [kernel, stdlib]}
 ]}.

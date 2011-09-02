@@ -33,8 +33,8 @@
 %%% Exports
 %%%----------------------------------------------------------------------------
 
--export([get_config/1]).
--export([get_config_worker/1]).
+-export([get_config/0]).
+-export([get_config_worker/0]).
 -export([fill_one_pool_config/1]).
 -export([get_config_child/1]).
 
@@ -70,10 +70,10 @@ get_config_child(List) ->
 %% @doc reads config file, fills in ewm record with configured values
 %% @since 2011-08-29 14:09
 %%
--spec get_config_worker(string()) -> #ewm{}.
+-spec get_config_worker() -> #ewm{}.
 
-get_config_worker(Default) ->
-    List = get_config_list(Default),
+get_config_worker() ->
+    List = get_config_list(),
     fill_ewm_worker_config(List).
 
 %%-----------------------------------------------------------------------------
@@ -82,10 +82,10 @@ get_config_worker(Default) ->
 %% values
 %% @since 2011-07-15
 %%
--spec get_config(string()) -> #ewm{}.
+-spec get_config() -> #ewm{}.
 
-get_config(Default) ->
-    List = get_config_list(Default),
+get_config() ->
+    List = get_config_list(),
     fill_config(List).
 
 %%-----------------------------------------------------------------------------
@@ -138,18 +138,10 @@ get_worker_duration(List) ->
 %% does read_config for that file
 %% @since 2011-08-01 17:01
 %%
--spec get_config_list(string()) -> list().
+-spec get_config_list() -> list().
 
-get_config_list(Default) ->
-    case application:get_env('eworkman', 'CONFIG') of
-        {ok, File} when is_list(File) ->
-            mpln_misc_conf:read_config(File);
-        {ok, A} when is_atom(A) ->
-            File = atom_to_list(A),
-            mpln_misc_conf:read_config(File);
-        _ ->
-            mpln_misc_conf:read_config(Default)
-    end.
+get_config_list() ->
+    application:get_all_env('eworkman').
 
 %%-----------------------------------------------------------------------------
 %%
@@ -172,7 +164,7 @@ fill_ewm_worker_config(List) ->
     Web = fill_web_config(List),
     Web#ewm{
         w_pools = Pools,
-        log = proplists:get_value(log, List, ?LOG),
+        log = proplists:get_value(log, List),
         debug = proplists:get_value(debug, List, [])
     }.
 

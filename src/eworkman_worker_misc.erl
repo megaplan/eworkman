@@ -365,10 +365,11 @@ fetch_pool_os_pids(#pool{workers=Workers} = Pool) ->
 
 restart_one_worker(St, #chi{id=Id, mon=Mref} = Orig) ->
     erlang:demonitor(Mref),
+    P_info = process_info(Orig#chi.pid),
     Res_t = supervisor:terminate_child(eworkman_long_supervisor, Id),
     Res = supervisor:restart_child(eworkman_long_supervisor, Id),
-    mpln_p_debug:pr({?MODULE, 'restart_one_worker', ?LINE, Orig, Res_t, Res},
-        St#ewm.debug, run, 3),
+    mpln_p_debug:pr({?MODULE, 'restart_one_worker', ?LINE, Orig, Res_t,
+        Res, P_info}, St#ewm.debug, run, 3),
     case Res of
         {ok, Pid} ->
             New_mref = erlang:monitor(process, Pid),
@@ -376,9 +377,9 @@ restart_one_worker(St, #chi{id=Id, mon=Mref} = Orig) ->
         {ok, Pid, _Info} ->
             New_mref = erlang:monitor(process, Pid),
             #chi{pid=Pid, id=Id, start=now(), mon=New_mref};
-        {error, Reason} ->
+        {error, _Reason} ->
             mpln_p_debug:pr({?MODULE, 'restart_one_worker error', ?LINE,
-                Orig, Res_t, Reason}, St#ewm.debug, run, 0),
+                Orig, Res_t, Res}, St#ewm.debug, run, 0),
             Orig
     end.
 

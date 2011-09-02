@@ -121,16 +121,31 @@ fill_one_pool_config(List) ->
 %%% Internal functions
 %%%----------------------------------------------------------------------------
 %%
-%% @doc gets worker duration from the list
-%% @since 2011-08-25 17:50
+%% @doc gets duration for some tag
+%% @since 2011-09-02 19:10
 %%
-get_worker_duration(List) ->
-    case proplists:get_value(worker_duration, List, 86400) of
+-spec get_tag_duration(any(), list()) -> non_neg_integer().
+
+get_tag_duration(Tag, List) ->
+    get_tag_duration(Tag, List, 0).
+
+-spec get_tag_duration(any(), list(), non_neg_integer()) -> non_neg_integer().
+
+get_tag_duration(Tag, List, Default) ->
+    case proplists:get_value(Tag, List, Default) of
         Val when is_integer(Val), Val > 0 ->
             Val;
         _ ->
             0
     end.
+
+%%-----------------------------------------------------------------------------
+%%
+%% @doc gets worker duration from the list
+%% @since 2011-08-25 17:50
+%%
+get_worker_duration(List) ->
+    get_tag_duration(worker_duration, List, 86400).
 
 %%-----------------------------------------------------------------------------
 %%
@@ -165,6 +180,7 @@ fill_ewm_worker_config(List) ->
     Web#ewm{
         w_pools = Pools,
         log = proplists:get_value(log, List),
+        delay_for_log = get_tag_duration(delay_for_log, List),
         debug = proplists:get_value(debug, List, [])
     }.
 

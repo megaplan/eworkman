@@ -267,7 +267,8 @@ prepare_all(C) ->
 
 prepare_log(#ewm{log=undefined}) ->
     ok;
-prepare_log(#ewm{log=Log}) ->
+prepare_log(#ewm{log=Log, delay_for_log=T}) ->
+    timer:sleep(T),
     mpln_misc_log:prepare_log(Log).
 
 %%-----------------------------------------------------------------------------

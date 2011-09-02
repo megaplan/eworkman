@@ -39,6 +39,7 @@
     w_pools = [],
     web_server_pid,
     web_server_opts,
+    delay_for_log,
     log,
     debug
 }).

@@ -56,7 +56,7 @@ spawn_one_worker(C, Pool) ->
     Workers = Pool#pool.workers,
     Res = start_child(Pool, Id),
     mpln_p_debug:pr({?MODULE, 'real_spawn_one_worker res', ?LINE, Res},
-        C#ewm.debug, run, 3),
+        C#ewm.debug, worker, 3),
     case Res of
         {ok, Pid} ->
             Mref = erlang:monitor(process, Pid),

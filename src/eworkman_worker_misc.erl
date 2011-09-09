@@ -372,7 +372,7 @@ restart_one_worker(St, Pool, #chi{id=Id, mon=Mref} = Orig) ->
     Res_d = supervisor:delete_child(eworkman_long_supervisor, Id),
     Res = eworkman_worker_spawn:start_child(Pool, Id),
     mpln_p_debug:pr({?MODULE, 'restart_one_worker', ?LINE, Orig, Res_t,
-        Res_d, Res, P_info}, St#ewm.debug, run, 3),
+        Res_d, Res, P_info}, St#ewm.debug, worker, 3),
     case Res of
         {ok, Pid} ->
             New_mref = erlang:monitor(process, Pid),
@@ -382,7 +382,7 @@ restart_one_worker(St, Pool, #chi{id=Id, mon=Mref} = Orig) ->
             #chi{pid=Pid, id=Id, start=now(), mon=New_mref};
         {error, _Reason} ->
             mpln_p_debug:pr({?MODULE, 'restart_one_worker error', ?LINE,
-                Orig, Res_t, Res}, St#ewm.debug, run, 0),
+                Orig, Res_t, Res}, St#ewm.debug, worker, 0),
             Orig
     end.
 

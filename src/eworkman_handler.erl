@@ -88,7 +88,7 @@ handle_call(status2, _From, St) ->
 handle_call(status, _From, St) ->
     {reply, St, St, ?T};
 handle_call(_N, _From, St) ->
-    mpln_p_debug:pr({?MODULE, 'other', ?LINE, _N}, St#ewm.debug, run, 3),
+    mpln_p_debug:pr({?MODULE, 'other', ?LINE, _N}, St#ewm.debug, run, 2),
     New = do_smth(St),
     {reply, {error, unknown_request}, New, ?T}.
 %%-----------------------------------------------------------------------------
@@ -109,7 +109,7 @@ handle_cast({add_worker, Pool_id}, St) ->
     New = do_smth(St_w),
     {noreply, New, ?T};
 handle_cast(_N, St) ->
-    mpln_p_debug:pr({?MODULE, 'cast other', ?LINE, _N}, St#ewm.debug, run, 3),
+    mpln_p_debug:pr({?MODULE, 'cast other', ?LINE, _N}, St#ewm.debug, run, 2),
     New = do_smth(St),
     {noreply, New, ?T}.
 %%-----------------------------------------------------------------------------
@@ -138,7 +138,7 @@ handle_info(timeout, State) ->
     New = do_smth(State),
     {noreply, New, ?T};
 handle_info(_Req, State) ->
-    mpln_p_debug:pr({?MODULE, other, ?LINE, _Req}, State#ewm.debug, run, 3),
+    mpln_p_debug:pr({?MODULE, other, ?LINE, _Req}, State#ewm.debug, run, 2),
     New = do_smth(State),
     {noreply, New, ?T}.
 %%-----------------------------------------------------------------------------

@@ -41,6 +41,7 @@
 -export([cmd2/2, cmd2/3]).
 -export([add_pool/1, add_worker/1]).
 -export([get_status2/0]).
+-export([logrotate/0]).
 
 %%%----------------------------------------------------------------------------
 %%% Includes
@@ -100,8 +101,9 @@ handle_call(_N, _From, St) ->
 
 handle_cast(stop, St) ->
     {stop, normal, St};
-handle_cast(st0p, St) ->
-    St;
+handle_cast(logrotate, St) ->
+    prepare_log(St),
+    {noreply, St, ?T};
 handle_cast({add_worker, Pool_id}, St) ->
     mpln_p_debug:pr({?MODULE, 'cast add_worker', ?LINE, Pool_id},
         St#ewm.debug, run, 4),
@@ -232,6 +234,16 @@ add_worker(Pool_id) ->
 
 get_status2() ->
     gen_server:call(?MODULE, status2).
+
+%%-----------------------------------------------------------------------------
+%%
+%% @doc sends message to the server to rotate logs
+%% @since 2011-09-13 17:29
+%%
+-spec logrotate() -> ok.
+
+logrotate() ->
+    gen_server:cast(?MODULE, logrotate).
 
 %%%----------------------------------------------------------------------------
 %%% Internal functions

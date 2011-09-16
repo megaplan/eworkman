@@ -256,7 +256,23 @@ logrotate() ->
 
 do_smth(State) ->
     mpln_p_debug:pr({?MODULE, 'do_smth', ?LINE}, State#ewm.debug, run, 5),
-    eworkman_worker_misc:check_workers(State).
+    Stl = check_log_rotate(State),
+    eworkman_worker_misc:check_workers(Stl).
+
+%%-----------------------------------------------------------------------------
+%%
+%% @doc rotate log if it's time to do it
+%%
+-spec check_log_rotate(#ewm{}) -> #ewm{}.
+
+check_log_rotate(#ewm{log_last=Last, log_rotate=Dur} = St) ->
+    case mpln_misc_log:need_rotate(Last, Dur) of
+        true ->
+            prepare_log(St),
+            St#ewm{log_last = calendar:local_time()};
+        false ->
+            St
+    end.
 
 %%-----------------------------------------------------------------------------
 get_status(St) ->

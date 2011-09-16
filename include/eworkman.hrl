@@ -41,6 +41,8 @@
     web_server_opts,
     delay_for_log,
     log,
+    log_last,
+    log_rotate :: minute | hour | day | month,
     debug
 }).
 

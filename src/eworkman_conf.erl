@@ -177,11 +177,22 @@ fill_pools_config(List) ->
 fill_ewm_worker_config(List) ->
     Pools = fill_pools_config(List),
     Web = fill_web_config(List),
-    Web#ewm{
+    Log = fill_log_config(List, Web),
+    Log#ewm{
         w_pools = Pools,
-        log = proplists:get_value(log, List),
-        delay_for_log = get_tag_duration(delay_for_log, List),
         debug = proplists:get_value(debug, List, [])
+    }.
+
+%%-----------------------------------------------------------------------------
+%%
+%% @doc fills config with log related parameters
+%%
+fill_log_config(List, C) ->
+    C#ewm{
+        log = proplists:get_value(log, List),
+        log_last = calendar:local_time(),
+        log_rotate = proplists:get_value(log_rotate, List),
+        delay_for_log = get_tag_duration(delay_for_log, List)
     }.
 
 %%-----------------------------------------------------------------------------

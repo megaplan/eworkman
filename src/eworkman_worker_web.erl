@@ -56,11 +56,13 @@
 
 prepare_web(C) ->
     case C#ewm.web_server_opts of
-        [_|_] ->
-            List = proplists:delete(loop, C#ewm.web_server_opts),
-            Opts = [{loop, {?MODULE, dispatch, [C]}} | List],
-            {ok, Https} = mochiweb_http:start(Opts),
-            C#ewm{web_server_pid = Https};
+        [_|_] = List ->
+            Docroot = proplists:get_value(docroot, List),
+            Sconf = proplists:get_value(sconf, List),
+            Gconf = proplists:get_value(gconf, List),
+            Id = proplists:get_value(id, List),
+            Res = yaws:start_embedded(Docroot, Sconf, Gconf, Id),
+            C#ewm{web_server_pid = Res};
         _ ->
             C
     end.

@@ -1,0 +1,19 @@
+<erl>
+
+out(A) ->
+    L = case (A#arg.req)#http_request.method of
+            'GET' ->
+                yaws_api:parse_query(A);
+            _ ->
+                []
+        end,
+    Type = proplists:get_value("type", L),
+    St_data = eworkman_handler:get_status2(),
+    case Type of
+        "full" ->
+            {content, "text/plain", io_lib:format("~p", [St_data])};
+        _ ->
+            {html, eworkman_worker_web_page:format_page(St_data)}
+    end.
+
+</erl>

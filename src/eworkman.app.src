@@ -16,6 +16,7 @@
     ]},
     {registered, [eworkman_handler, eworkman_long_supervisor]},
     {mod, {eworkman_app,[]}},
-    {applications, [kernel, stdlib]}
+    %{applications, [kernel, stdlib]}
+    {applications, [kernel, stdlib, ssl]} % ssl - for yaws, actually
 ]}.
 

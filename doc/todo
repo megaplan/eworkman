@@ -4,12 +4,12 @@ TODO:
   in ejobman_handler_cmd:do_one_long_command. Because we don't want to crash
   handler on worker timeout.
 - compile and store regexp in ejobman_handler config preparation
-- logrotate
 - config reload:
   - amqp reconnect?
 
 DONE:
 
+- logrotate
 - check for correct data on receive
 - add api add_pool, add_worker
 - format functions for edoc to work. That means put an empty line (or a line

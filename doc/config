@@ -125,20 +125,15 @@ Eworkman
 web_server_opts
 ---------------
 
-The 'web_server_opts' section contains parameters for mochiweb that
+The 'web_server_opts' section contains parameters for yaws web server which
 is started by eworkman_handler. If the whole section is missing then no
-mochiweb is started.
-The parameters:
-  port - port to bind. Integer. No default
-  name - name of a registered process. Atom. No default
-  ssl - ssl flag. Boolean. No default
-  ssl_opts - list of ssl options (every option is a {key, value} typle).
-  No default.
-  The options:
-    certfile - path to ssl certificate. Must be part of ssl_opts. String.
-    No default
-    keyfile  - path to ssl key file. Must be part of ssl_opts. String. No
-	default
+web server is started.
+The parameters (for more information on parameters see yaws server doc
+and sources):
+  id - id
+  docroot - document root
+  sconf - local parameters for virtual server
+  gconf - global web server parameters
 
 pools
 -----
@@ -170,6 +165,13 @@ ejobman and eworkman log parameters.
 The parameters:
   log - the value is a directory name and the beginning part of a filename.
   String. Default: "/var/log/erpher/ewm"
+
+log_rotate
+----------
+Rotate interval for logs. Atom. The log file is rotated at the beginning of
+a time interval. E.g.: for 'day' it would be 00:00:00.
+Possible values: minute, hour, day, month.
+
 
 debug
 -----

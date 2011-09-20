@@ -367,7 +367,7 @@ restart_one_worker(St, Pool, #chi{id=Id, mon=Mref} = Orig) ->
     erlang:demonitor(Mref),
     P_info = process_info(Orig#chi.pid),
     Res_t = supervisor:terminate_child(eworkman_long_supervisor, Id),
-    % restart_child doesn't work in r14b3
+    % restart temporary child doesn't work in r14b3 and above
     % Res = supervisor:restart_child(eworkman_long_supervisor, Id),
     Res_d = supervisor:delete_child(eworkman_long_supervisor, Id),
     Res = eworkman_worker_spawn:start_child(Pool, Id),

@@ -10,6 +10,8 @@ out(A) ->
     Type = proplists:get_value("type", L),
     St_data = eworkman_handler:get_status2(),
     case Type of
+        _ when St_data == [] ->
+            {content, "text/plain", "Pool data empty"};
         "full" ->
             {content, "text/plain", io_lib:format("~p", [St_data])};
         _ ->

@@ -119,7 +119,7 @@ handle_cast(_N, St) ->
 %% @doc Note: it won't be called unless trap_exit is set
 %%
 terminate(_, State) ->
-    mochiweb_http:stop(State#ewm.web_server_pid),
+    yaws:stop(),
     eworkman_worker_misc:remove_workers(State),
     mpln_p_debug:pr({?MODULE, 'terminate', ?LINE}, State#ewm.debug, run, 1),
     ok.

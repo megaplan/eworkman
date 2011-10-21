@@ -1,0 +1,15 @@
+<erl>
+
+% shows ejobman job log as rss
+
+out(A) ->
+    File = ejobman_handler:get_job_log_filename(),
+    case File of
+        undefined ->
+            {content, "text/plain", "Job log file name undefined."};
+        _ ->
+            Text = ejobman_log:make_xml(File),
+            {content, "text/xml", Text}
+    end.
+
+</erl>

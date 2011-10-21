@@ -8,7 +8,8 @@ out(A) ->
         undefined ->
             {content, "text/plain", "Job log file name undefined."};
         _ ->
-            Text = ejobman_log:make_xml(File),
+            Size = 8000,
+            Text = ejobman_log:make_jlog_xml(File, Size),
             {content, "text/xml", Text}
     end.
 

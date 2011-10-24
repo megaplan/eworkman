@@ -61,6 +61,7 @@ prepare_web(C) ->
             Sconf = proplists:get_value(sconf, List),
             Gconf = proplists:get_value(gconf, List),
             Id = proplists:get_value(id, List),
+            prepare_yaws(Gconf),
             Res = yaws:start_embedded(Docroot, Sconf, Gconf, Id),
             C#ewm{web_server_pid = Res};
         _ ->
@@ -117,5 +118,13 @@ get_resource(_C, Req, _Path, _Type) ->
 get_query_type(Req) ->
     Q = Req:parse_qs(),
     proplists:get_value("type", Q).
+
+%%-----------------------------------------------------------------------------
+%%
+%% @doc creates yaws log dir. It's better to do it here than in install
+%%
+prepare_yaws(Gconf) ->
+    Base = proplists:get_value(logdir, Gconf),
+    filelib:ensure_dir(Base ++ "/logfile").
 
 %%-----------------------------------------------------------------------------

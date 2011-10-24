@@ -3,12 +3,24 @@
 % shows ejobman job log as rss
 
 out(A) ->
+    {Ip, _} = A#arg.client_ip_port,
+    case Ip of
+        {127,_,_,_} ->
+            make_resp();
+        {192,168,_,_} ->
+            make_resp();
+        _ ->
+            Str = io_lib:format("forbidden ip address: ~p", [Ip]),
+            {content, "text/plain", Str}
+    end.
+
+make_resp() ->
     File = ejobman_handler:get_job_log_filename(),
     case File of
         undefined ->
             {content, "text/plain", "Job log file name undefined."};
         _ ->
-            Size = 8000,
+            Size = 1048576,
             Text = ejobman_log:make_jlog_xml(File, Size),
             {content, "text/xml", Text}
     end.

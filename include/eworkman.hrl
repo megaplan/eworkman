@@ -43,6 +43,7 @@
     log,
     log_last,
     log_rotate :: minute | hour | day | month,
+    pid_file,
     debug
 }).
 

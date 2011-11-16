@@ -118,9 +118,10 @@ handle_cast(_N, St) ->
 %%
 %% @doc Note: it won't be called unless trap_exit is set
 %%
-terminate(_, State) ->
+terminate(_, #ewm{pid_file=File} = State) ->
     yaws:stop(),
     eworkman_worker_misc:remove_workers(State),
+    mpln_misc_run:remove_pid(File),
     mpln_p_debug:pr({?MODULE, 'terminate', ?LINE}, State#ewm.debug, run, 1),
     ok.
 %%-----------------------------------------------------------------------------
@@ -285,7 +286,8 @@ get_status(St) ->
 -spec prepare_all(#ewm{}) -> ok.
 
 prepare_all(C) ->
-    prepare_log(C).
+    prepare_log(C),
+    write_pid(C).
 
 %%-----------------------------------------------------------------------------
 %%
@@ -300,3 +302,14 @@ prepare_log(#ewm{log=Log, delay_for_log=T}) ->
     mpln_misc_log:prepare_log(Log).
 
 %%-----------------------------------------------------------------------------
+%%
+%% @doc writes pid file
+%% @since 2011-11-11 14:17
+%%
+-spec write_pid(#ewm{}) -> ok.
+
+write_pid(#ewm{pid_file=undefined}) ->
+    ok;
+write_pid(#ewm{pid_file=File}) ->
+    mpln_misc_run:write_pid(File).
+

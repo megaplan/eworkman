@@ -180,7 +180,8 @@ fill_ewm_worker_config(List) ->
     Log = fill_log_config(List, Web),
     Log#ewm{
         w_pools = Pools,
-        debug = proplists:get_value(debug, List, [])
+        debug = proplists:get_value(debug, List, []),
+        pid_file = proplists:get_value(pid_file, List)
     }.
 
 %%-----------------------------------------------------------------------------

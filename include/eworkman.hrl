@@ -42,7 +42,7 @@
     delay_for_log,
     log,
     log_last,
-    log_rotate :: minute | hour | day | month,
+    log_rotate :: never | minute | hour | day | {dow, 0..7} | month | year,
     pid_file,
     debug
 }).

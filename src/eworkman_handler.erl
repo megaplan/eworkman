@@ -262,11 +262,12 @@ do_smth(State) ->
 
 %%-----------------------------------------------------------------------------
 %%
-%% @doc rotate log if it's time to do it
+%% @doc rotate log if it's time to do it. Recreate log if it disappeared
 %%
 -spec check_log_rotate(#ewm{}) -> #ewm{}.
 
-check_log_rotate(#ewm{log_last=Last, log_rotate=Dur} = St) ->
+check_log_rotate(#ewm{log=Base, log_last=Last, log_rotate=Dur} = St) ->
+    mpln_misc_log:recreate_log(Base),
     case mpln_misc_log:need_rotate(Last, Dur) of
         true ->
             prepare_log(St),

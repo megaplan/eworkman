@@ -9,7 +9,7 @@ EBIN_DIR := ebin
 HTML_DOC_DIR = doc/html
 ERLC_OPTS = +debug_info -DTEST
 ERLC := erlc $(ERLC_OPTS)
-VSN=1.0
+VSN=1.1
 APP_NAME=eworkman
 LICENSE=MIT
 
@@ -35,7 +35,6 @@ $(EBIN_DIR) :
 	( test -d $(EBIN_DIR) || mkdir -p $(EBIN_DIR) )
 
 dia:
-	PATH=$(HOME)/util/erlang/dist/r14b3/bin:$(PATH) \
 	dialyzer \
 		$(INCLUDES) \
 		--src \

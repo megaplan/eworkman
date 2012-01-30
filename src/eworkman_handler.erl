@@ -58,8 +58,8 @@
 %%%----------------------------------------------------------------------------
 init(_) ->
     C = eworkman_conf:get_config_worker(),
-    prepare_all(C),
-    Conf_w = eworkman_worker_web:prepare_web(C),
+    Ct = prepare_all(C),
+    Conf_w = eworkman_worker_web:prepare_web(Ct),
     New = eworkman_worker_misc:prepare_workers(Conf_w),
     % trap_exit is unnecessary. Children are ripped by supervisor
     %process_flag(trap_exit, true),
@@ -72,26 +72,23 @@ init(_) ->
 %%
 -spec handle_call(any(), any(), #ewm{}) ->
     {stop, normal, ok, #ewm{}}
-    | {reply, any(), #ewm{}, non_neg_integer()}.
+    | {reply, any(), #ewm{}}.
 
 %% @doc adds a new pool
 handle_call({add_pool, Pool}, _From, St) ->
-    St_d = do_smth(St),
-    New = eworkman_worker_misc:add_pool(St_d, Pool),
-    {reply, ok, New, ?T};
+    New = eworkman_worker_misc:add_pool(St, Pool),
+    {reply, ok, New};
 
 handle_call(stop, _From, St) ->
     {stop, normal, ok, St};
 handle_call(status2, _From, St) ->
     Res = get_status(St),
-    New = do_smth(St),
-    {reply, Res, New, ?T};
+    {reply, Res, St};
 handle_call(status, _From, St) ->
-    {reply, St, St, ?T};
+    {reply, St, St};
 handle_call(_N, _From, St) ->
     mpln_p_debug:pr({?MODULE, 'other', ?LINE, _N}, St#ewm.debug, run, 2),
-    New = do_smth(St),
-    {reply, {error, unknown_request}, New, ?T}.
+    {reply, {error, unknown_request}, St}.
 %%-----------------------------------------------------------------------------
 %%
 %% Handling cast messages
@@ -103,17 +100,15 @@ handle_cast(stop, St) ->
     {stop, normal, St};
 handle_cast(logrotate, St) ->
     prepare_log(St),
-    {noreply, St, ?T};
+    {noreply, St};
 handle_cast({add_worker, Pool_id}, St) ->
     mpln_p_debug:pr({?MODULE, 'cast add_worker', ?LINE, Pool_id},
         St#ewm.debug, run, 4),
     St_w = eworkman_worker_misc:throw_worker_pools(St, Pool_id),
-    New = do_smth(St_w),
-    {noreply, New, ?T};
+    {noreply, St_w};
 handle_cast(_N, St) ->
     mpln_p_debug:pr({?MODULE, 'cast other', ?LINE, _N}, St#ewm.debug, run, 2),
-    New = do_smth(St),
-    {noreply, New, ?T}.
+    {noreply, St}.
 %%-----------------------------------------------------------------------------
 %%
 %% @doc Note: it won't be called unless trap_exit is set
@@ -129,21 +124,25 @@ terminate(_, #ewm{pid_file=File} = State) ->
 %% Handling all non call/cast messages
 %% @since 2011-08-29 11:00
 %%
--spec handle_info(any(), #ewm{}) -> {noreply, #ewm{}, non_neg_integer()}.
+-spec handle_info(any(), #ewm{}) -> {noreply, #ewm{}}.
 
 handle_info({'DOWN', Mref, _, Oid, _Info}=Msg, State) ->
     mpln_p_debug:pr({?MODULE, info_down, ?LINE, Msg}, State#ewm.debug, run, 2),
     St_w = eworkman_worker_misc:handle_crashed(State, Mref, Oid),
-    New = do_smth(St_w),
-    {noreply, New, ?T};
+    {noreply, St_w};
 handle_info(timeout, State) ->
     mpln_p_debug:pr({?MODULE, info_timeout, ?LINE}, State#ewm.debug, run, 6),
     New = do_smth(State),
-    {noreply, New, ?T};
+    {noreply, New};
+
+handle_info(periodic_check, State) ->
+    mpln_p_debug:pr({?MODULE, periodic_check, ?LINE}, State#ewm.debug, run, 6),
+    New = do_smth(State),
+    {noreply, New};
+
 handle_info(_Req, State) ->
     mpln_p_debug:pr({?MODULE, other, ?LINE, _Req}, State#ewm.debug, run, 2),
-    New = do_smth(State),
-    {noreply, New, ?T}.
+    {noreply, State}.
 %%-----------------------------------------------------------------------------
 code_change(_Old_vsn, State, _Extra) ->
     {ok, State}.
@@ -255,10 +254,13 @@ logrotate() ->
 %%
 -spec do_smth(#ewm{}) -> #ewm{}.
 
-do_smth(State) ->
+do_smth(#ewm{timer=Ref} = State) ->
     mpln_p_debug:pr({?MODULE, 'do_smth', ?LINE}, State#ewm.debug, run, 5),
+    mpln_misc_run:cancel_timer(Ref),
     Stl = check_log_rotate(State),
-    eworkman_worker_misc:check_workers(Stl).
+    Stw = eworkman_worker_misc:check_workers(Stl),
+    Nref = erlang:send_after(?T, self(), periodic_check),
+    Stw#ewm{timer=Nref}.
 
 %%-----------------------------------------------------------------------------
 %%
@@ -284,11 +286,13 @@ get_status(St) ->
 %%
 %% @doc prepare all the things
 %%
--spec prepare_all(#ewm{}) -> ok.
+-spec prepare_all(#ewm{}) -> #ewm{}.
 
 prepare_all(C) ->
     prepare_log(C),
-    write_pid(C).
+    write_pid(C),
+    Ref = erlang:send_after(?T, self(), periodic_check),
+    C#ewm{timer=Ref}.
 
 %%-----------------------------------------------------------------------------
 %%

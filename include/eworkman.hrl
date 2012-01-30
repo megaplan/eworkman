@@ -44,6 +44,7 @@
     log_last,
     log_rotate :: never | minute | hour | day | {dow, 0..7} | month | year,
     pid_file,
+    timer :: reference(), % timer for periodic checks
     debug
 }).
 

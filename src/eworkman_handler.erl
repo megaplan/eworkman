@@ -132,12 +132,12 @@ handle_info({'DOWN', Mref, _, Oid, _Info}=Msg, State) ->
     {noreply, St_w};
 handle_info(timeout, State) ->
     mpln_p_debug:pr({?MODULE, info_timeout, ?LINE}, State#ewm.debug, run, 6),
-    New = do_smth(State),
+    New = periodic_check(State),
     {noreply, New};
 
 handle_info(periodic_check, State) ->
     mpln_p_debug:pr({?MODULE, periodic_check, ?LINE}, State#ewm.debug, run, 6),
-    New = do_smth(State),
+    New = periodic_check(State),
     {noreply, New};
 
 handle_info(_Req, State) ->
@@ -252,10 +252,11 @@ logrotate() ->
 %% @doc does miscellaneous periodic checks. E.g.: check for workers. Returns
 %% updated state.
 %%
--spec do_smth(#ewm{}) -> #ewm{}.
+-spec periodic_check(#ewm{}) -> #ewm{}.
 
-do_smth(#ewm{timer=Ref} = State) ->
-    mpln_p_debug:pr({?MODULE, 'do_smth', ?LINE}, State#ewm.debug, run, 5),
+periodic_check(#ewm{timer=Ref} = State) ->
+    mpln_p_debug:pr({?MODULE, 'periodic_check', ?LINE},
+                    State#ewm.debug, run, 5),
     mpln_misc_run:cancel_timer(Ref),
     Stl = check_log_rotate(State),
     Stw = eworkman_worker_misc:check_workers(Stl),

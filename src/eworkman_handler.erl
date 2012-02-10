@@ -346,8 +346,6 @@ do_config_reload(St) ->
     C = get_config_filename(),
     case file:consult(C) of
         {ok, [Data]} ->
-            mpln_p_debug:pr({?MODULE, 'do_config_reload ok', ?LINE, C,
-                Data}, St#ewm.debug, run, 4),
             proceed_config(St, Data);
         Other ->
             mpln_p_debug:pr({?MODULE, 'do_config_reload error', ?LINE, C,

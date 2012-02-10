@@ -42,6 +42,9 @@
 -export([add_pool/1, add_worker/1]).
 -export([get_status2/0]).
 -export([logrotate/0]).
+-export([
+    config_reload/0
+    ]).
 
 %%%----------------------------------------------------------------------------
 %%% Includes
@@ -98,6 +101,11 @@ handle_call(_N, _From, St) ->
 
 handle_cast(stop, St) ->
     {stop, normal, St};
+
+handle_cast(config_reload, St) ->
+    do_config_reload(St),
+    {noreply, St};
+
 handle_cast(logrotate, St) ->
     prepare_log(St),
     {noreply, St};
@@ -245,6 +253,16 @@ get_status2() ->
 logrotate() ->
     gen_server:cast(?MODULE, logrotate).
 
+%%-----------------------------------------------------------------------------
+%%
+%% @doc sends message to the server to reload config
+%% @since 2012-02-10 14:29
+%%
+-spec config_reload() -> ok.
+
+config_reload() ->
+    gen_server:cast(?MODULE, config_reload).
+
 %%%----------------------------------------------------------------------------
 %%% Internal functions
 %%%----------------------------------------------------------------------------
@@ -319,3 +337,63 @@ write_pid(#ewm{pid_file=undefined}) ->
 write_pid(#ewm{pid_file=File}) ->
     mpln_misc_run:write_pid(File).
 
+%%-----------------------------------------------------------------------------
+%%
+%% @doc reads config file and sets parameters of (configured) applications
+%% to new values
+%%
+do_config_reload(St) ->
+    C = get_config_filename(),
+    case file:consult(C) of
+        {ok, [Data]} ->
+            mpln_p_debug:pr({?MODULE, 'do_config_reload ok', ?LINE, C,
+                Data}, St#ewm.debug, run, 4),
+            proceed_config(St, Data);
+        Other ->
+            mpln_p_debug:pr({?MODULE, 'do_config_reload error', ?LINE, C,
+                Other}, St#ewm.debug, run, 0)
+    end.
+
+%%-----------------------------------------------------------------------------
+%%
+%% @doc returns config file name for current VM
+%%
+get_config_filename() ->
+    case init:get_argument(config) of
+        {ok, [[File]|_]} ->
+            File;
+        error ->
+            undefined
+    end.
+
+%%-----------------------------------------------------------------------------
+%%
+%% @doc sets new env values for applications stored in config
+%%
+proceed_config(#ewm{apps=Apps} = St, List) ->
+    F = fun(A) ->
+        L = proplists:get_value(A, List, []),
+        mpln_p_debug:pr({?MODULE, 'proceed_config', ?LINE, A, L},
+            St#ewm.debug, run, 4),
+        set_one_app_env(St, A, L)
+    end,
+    lists:foreach(F, Apps).
+
+%%-----------------------------------------------------------------------------
+%%
+%% @doc sets new env values for one application
+%%
+set_one_app_env(St, App, List) when is_list(List) ->
+    F = fun(Key) ->
+        Val = proplists:get_value(Key, List),
+        mpln_p_debug:pr({?MODULE, 'set_one_app_env', ?LINE, App, Key, Val},
+            St#ewm.debug, run, 4),
+        application:set_env(App, Key, Val)
+    end,
+    Keys = proplists:get_keys(List),
+    lists:foreach(F, Keys);
+
+set_one_app_env(_St, _App, _List) ->
+    ok.
+
+%%-----------------------------------------------------------------------------

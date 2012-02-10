@@ -370,12 +370,10 @@ get_config_filename() ->
 %%
 %% @doc sets new env values for applications stored in config
 %%
-proceed_config(#ewm{apps=Apps} = St, List) ->
+proceed_config(#ewm{apps=Apps}, List) ->
     F = fun(A) ->
         L = proplists:get_value(A, List, []),
-        mpln_p_debug:pr({?MODULE, 'proceed_config', ?LINE, A, L},
-            St#ewm.debug, run, 4),
-        set_one_app_env(St, A, L)
+        set_one_app_env(A, L)
     end,
     lists:foreach(F, Apps).
 
@@ -383,17 +381,15 @@ proceed_config(#ewm{apps=Apps} = St, List) ->
 %%
 %% @doc sets new env values for one application
 %%
-set_one_app_env(St, App, List) when is_list(List) ->
+set_one_app_env(App, List) when is_list(List) ->
     F = fun(Key) ->
         Val = proplists:get_value(Key, List),
-        mpln_p_debug:pr({?MODULE, 'set_one_app_env', ?LINE, App, Key, Val},
-            St#ewm.debug, run, 4),
         application:set_env(App, Key, Val)
     end,
     Keys = proplists:get_keys(List),
     lists:foreach(F, Keys);
 
-set_one_app_env(_St, _App, _List) ->
+set_one_app_env(_App, _List) ->
     ok.
 
 %%-----------------------------------------------------------------------------

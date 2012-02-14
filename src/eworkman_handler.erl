@@ -368,10 +368,11 @@ get_config_filename() ->
 %%
 %% @doc sets new env values for applications stored in config
 %%
-proceed_config(#ewm{apps=Apps}, List) ->
-    F = fun(A) ->
+proceed_config(#ewm{apps=Apps} = St, List) ->
+    F = fun({A, Procs}) ->
         L = proplists:get_value(A, List, []),
-        set_one_app_env(A, L)
+        set_one_app_env(A, L),
+        send_reload(St, Procs)
     end,
     lists:foreach(F, Apps).
 
@@ -389,5 +390,14 @@ set_one_app_env(App, List) when is_list(List) ->
 
 set_one_app_env(_App, _List) ->
     ok.
+
+%%-----------------------------------------------------------------------------
+%%
+%% @doc sends reload signal to processes
+%%
+send_reload(St, Names) ->
+    Res = [catch X:reload_config_signal() || X <- Names],
+    mpln_p_debug:pr({?MODULE, 'send_reload', ?LINE, Names, Res},
+        St#ewm.debug, run, 4).
 
 %%-----------------------------------------------------------------------------

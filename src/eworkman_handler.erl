@@ -398,6 +398,6 @@ set_one_app_env(_App, _List) ->
 send_reload(St, Names) ->
     Res = [catch X:reload_config_signal() || X <- Names],
     mpln_p_debug:pr({?MODULE, 'send_reload', ?LINE, Names, Res},
-        St#ewm.debug, run, 4).
+        St#ewm.debug, run, 2).
 
 %%-----------------------------------------------------------------------------

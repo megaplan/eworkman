@@ -36,7 +36,7 @@
 
 % state of a workers handler
 -record(ewm, {
-    w_pools = [],
+    w_pools = [] :: [#pool{}],
     web_server_pid,
     web_server_opts,
     delay_for_log,

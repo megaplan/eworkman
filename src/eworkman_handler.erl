@@ -43,6 +43,7 @@
 -export([get_status2/0]).
 -export([logrotate/0]).
 -export([
+    reload_config_signal/0,
     config_reload/0
     ]).
 
@@ -105,6 +106,10 @@ handle_cast(stop, St) ->
 handle_cast(config_reload, St) ->
     do_config_reload(St),
     {noreply, St};
+
+handle_cast(reload_config_signal, St) ->
+    New = process_reload_config(St),
+    {noreply, New};
 
 handle_cast(logrotate, St) ->
     prepare_log(St),
@@ -263,6 +268,15 @@ logrotate() ->
 config_reload() ->
     gen_server:cast(?MODULE, config_reload).
 
+%%
+%% @doc send a message to the server to reload own config
+%% @since 2012-03-01 12:17
+%%
+-spec reload_config_signal() -> ok.
+
+reload_config_signal() ->
+    gen_server:cast(?MODULE, reload_config_signal).
+
 %%%----------------------------------------------------------------------------
 %%% Internal functions
 %%%----------------------------------------------------------------------------
@@ -399,5 +413,25 @@ send_reload(St, Names) ->
     Res = [catch X:reload_config_signal() || X <- Names],
     mpln_p_debug:pr({?MODULE, 'send_reload', ?LINE, Names, Res},
         St#ewm.debug, run, 2).
+
+%%-----------------------------------------------------------------------------
+%%
+%% @doc fetches config from updated environment and stores it in the state
+%%
+-spec process_reload_config(#ewm{}) -> #ewm{}.
+
+process_reload_config(St) ->
+    yaws:stop(),
+    %eworkman_worker_misc:remove_workers(St), % ???
+    mpln_misc_run:remove_pid(St#ewm.pid_file),
+
+    C = eworkman_conf:get_config_worker(St),
+    Ct = prepare_all(C),
+    Conf_w = eworkman_worker_web:prepare_web(Ct),
+    New = eworkman_worker_misc:prepare_workers(Conf_w),
+
+    mpln_p_debug:pr({?MODULE, 'process_reload_config done', ?LINE},
+        New#ewm.debug, run, 1),
+    New.
 
 %%-----------------------------------------------------------------------------

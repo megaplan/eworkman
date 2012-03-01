@@ -35,6 +35,7 @@
 
 -export([get_config/0]).
 -export([get_config_worker/0]).
+-export([get_config_worker/1]).
 -export([fill_one_pool_config/1]).
 -export([get_config_child/1]).
 
@@ -73,8 +74,13 @@ get_config_child(List) ->
 -spec get_config_worker() -> #ewm{}.
 
 get_config_worker() ->
+    get_config_worker(#ewm{}).
+
+-spec get_config_worker(#ewm{}) -> #ewm{}.
+
+get_config_worker(Src) ->
     List = get_config_list(),
-    fill_ewm_worker_config(List).
+    fill_ewm_worker_config(List, Src).
 
 %%-----------------------------------------------------------------------------
 %%
@@ -106,11 +112,19 @@ fill_config(List) ->
 %%
 %% @doc fills config for one pool
 %%
+-spec fill_one_pool_config(list()) -> #pool{}.
+
 fill_one_pool_config(List) ->
-    #pool{
-        id = proplists:get_value(id, List),
+    fill_one_pool_config(List, []).
+
+-spec fill_one_pool_config(list(), [#pool{}]) -> #pool{}.
+
+fill_one_pool_config(List, Src_pools) ->
+    Id = proplists:get_value(id, List),
+    P = get_src_pool(Src_pools, Id),
+    P#pool{
+        id =Id,
         worker_config = proplists:get_value(worker, List, []),
-        workers = [],
         w_duration = get_worker_duration(List),
         restart_policy = proplists:get_value(restart_policy, List),
         restart_delay = proplists:get_value(restart_delay, List, 10),
@@ -120,6 +134,23 @@ fill_one_pool_config(List) ->
 %%%----------------------------------------------------------------------------
 %%% Internal functions
 %%%----------------------------------------------------------------------------
+%%
+%% @doc find and return pool with given id. Otherwise return fresh pool
+%%
+-spec get_src_pool([#pool{}], any()) -> #pool{}.
+
+get_src_pool(List, Id) ->
+    F = fun(#pool{id=X}) ->
+            X =:= Id
+    end,
+    case lists:filter(F, List) of
+        [P|_] ->
+            P;
+        _ ->
+            #pool{}
+    end.
+
+%%-----------------------------------------------------------------------------
 %%
 %% @doc gets duration for some tag
 %% @since 2011-09-02 19:10
@@ -162,9 +193,9 @@ get_config_list() ->
 %%
 %% @doc fills configs for the pools defined
 %%
-fill_pools_config(List) ->
+fill_pools_config(List, Src) ->
     Pools = proplists:get_value(pools, List, []),
-    lists:map(fun fill_one_pool_config/1, Pools)
+    lists:map(fun(X) -> fill_one_pool_config(X, Src#ewm.w_pools) end, Pools)
 .
 
 %%-----------------------------------------------------------------------------
@@ -172,11 +203,11 @@ fill_pools_config(List) ->
 %% @doc creates a worker config
 %% @since 2011-08-29 14:15
 %%
--spec fill_ewm_worker_config(list()) -> #ewm{}.
+-spec fill_ewm_worker_config(list(), #ewm{}) -> #ewm{}.
 
-fill_ewm_worker_config(List) ->
-    Pools = fill_pools_config(List),
-    Web = fill_web_config(List),
+fill_ewm_worker_config(List, Src) ->
+    Pools = fill_pools_config(List, Src),
+    Web = fill_web_config(List, Src),
     Log = fill_log_config(List, Web),
     Log#ewm{
         w_pools = Pools,
@@ -201,8 +232,8 @@ fill_log_config(List, C) ->
 %%
 %% @doc gets web server parameters and stores them in the config record
 %%
-fill_web_config(List) ->
-    #ewm{
+fill_web_config(List, Src) ->
+    Src#ewm{
         web_server_opts = proplists:get_value(web_server_opts, List, [])
     }.
 
@@ -286,7 +317,7 @@ get_test_config_2() ->
 %%-----------------------------------------------------------------------------
 fill_ewm_handler_config_test() ->
     Config = get_test_config_2(),
-    C = fill_ewm_worker_config(Config),
+    C = fill_ewm_worker_config(Config, #ewm{}),
     C2 = #ewm{
         w_pools = [
             #pool{

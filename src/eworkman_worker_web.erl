@@ -62,6 +62,7 @@ prepare_web(C) ->
             Gconf = proplists:get_value(gconf, List),
             Id = proplists:get_value(id, List),
             prepare_yaws(Gconf),
+            % yaws:start_embedded returns 'ok', not pid()
             Res = yaws:start_embedded(Docroot, Sconf, Gconf, Id),
             C#ewm{web_server_pid = Res};
         _ ->

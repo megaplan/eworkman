@@ -207,7 +207,8 @@ fill_pools_config(List, Src) ->
 
 fill_ewm_worker_config(List, Src) ->
     Pools = fill_pools_config(List, Src),
-    Web = fill_web_config(List, Src),
+    Lc = fill_local_config(List, Src),
+    Web = fill_web_config(List, Lc),
     Log = fill_log_config(List, Web),
     Log#ewm{
         w_pools = Pools,
@@ -215,6 +216,18 @@ fill_ewm_worker_config(List, Src) ->
         debug = proplists:get_value(debug, List, []),
         pid_file = proplists:get_value(pid_file, List)
     }.
+
+%%-----------------------------------------------------------------------------
+%%
+%% @doc fills config with local config file name if it is defined
+%%
+fill_local_config(List, C) ->
+    case proplists:get_value(local_config, List) of
+        undefined ->
+            C;
+        File ->
+            C#ewm{local_config = File}
+    end.
 
 %%-----------------------------------------------------------------------------
 %%

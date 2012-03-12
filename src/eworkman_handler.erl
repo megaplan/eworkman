@@ -61,6 +61,7 @@
 %%% gen_server callbacks
 %%%----------------------------------------------------------------------------
 init(_) ->
+    prepare_updated_config(),
     C = eworkman_conf:get_config_worker(),
     Ct = prepare_all(C),
     Conf_w = eworkman_worker_web:prepare_web(Ct),
@@ -356,10 +357,10 @@ write_pid(#ewm{pid_file=File}) ->
 %% @doc reads config file and sets parameters of (configured) applications
 %% to new values
 %%
-do_config_reload(St) ->
-    C = get_config_filename(),
+do_config_reload(#ewm{local_config=C} = St) ->
     case file:consult(C) of
         {ok, [Data]} ->
+            erpher_conf:add_config(Data),
             proceed_config(St, Data);
         Other ->
             mpln_p_debug:pr({?MODULE, 'do_config_reload error', ?LINE, C,
@@ -368,42 +369,14 @@ do_config_reload(St) ->
 
 %%-----------------------------------------------------------------------------
 %%
-%% @doc returns config file name for current VM
-%%
-get_config_filename() ->
-    case init:get_argument(config) of
-        {ok, [[File]|_]} ->
-            File;
-        error ->
-            undefined
-    end.
-
-%%-----------------------------------------------------------------------------
-%%
 %% @doc sets new env values for applications stored in config
 %%
-proceed_config(#ewm{apps=Apps} = St, List) ->
-    F = fun({A, Procs}) ->
-        L = proplists:get_value(A, List, []),
-        set_one_app_env(A, L),
+proceed_config(#ewm{apps=Apps} = St, Conf) ->
+    F = fun({A, _}) ->
+        Procs = proplists:get_value(A, Apps, []),
         send_reload(St, Procs)
     end,
-    lists:foreach(F, Apps).
-
-%%-----------------------------------------------------------------------------
-%%
-%% @doc sets new env values for one application
-%%
-set_one_app_env(App, List) when is_list(List) ->
-    F = fun(Key) ->
-        Val = proplists:get_value(Key, List),
-        application:set_env(App, Key, Val)
-    end,
-    Keys = proplists:get_keys(List),
-    lists:foreach(F, Keys);
-
-set_one_app_env(_App, _List) ->
-    ok.
+    lists:foreach(F, Conf).
 
 %%-----------------------------------------------------------------------------
 %%
@@ -433,5 +406,16 @@ process_reload_config(St) ->
     mpln_p_debug:pr({?MODULE, 'process_reload_config done', ?LINE},
         New#ewm.debug, run, 1),
     New.
+
+%%-----------------------------------------------------------------------------
+prepare_updated_config() ->
+    C = eworkman_conf:get_config_worker(),
+    case file:consult(C#ewm.local_config) of
+        {ok, [Data]} ->
+            erpher_conf:add_config(Data);
+        Other ->
+            mpln_p_debug:pr({?MODULE, 'prepare_updated_config error', ?LINE,
+                             Other}, C#ewm.debug, run, 0)
+    end.
 
 %%-----------------------------------------------------------------------------

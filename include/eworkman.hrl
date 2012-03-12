@@ -41,6 +41,7 @@
     web_server_opts,
     delay_for_log,
     log,
+    local_config = "etc/local.config" :: string(),
     log_last,
     log_rotate :: never | minute | hour | day | {dow, 0..7} | month | year,
     pid_file,

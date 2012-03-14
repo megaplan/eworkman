@@ -410,12 +410,13 @@ process_reload_config(St) ->
 %%-----------------------------------------------------------------------------
 prepare_updated_config() ->
     C = eworkman_conf:get_config_worker(),
-    case file:consult(C#ewm.local_config) of
+    File = C#ewm.local_config,
+    case file:consult(File) of
         {ok, [Data]} ->
             erpher_conf:add_config(Data);
         Other ->
             mpln_p_debug:pr({?MODULE, 'prepare_updated_config error', ?LINE,
-                             Other}, C#ewm.debug, run, 0)
+                             File, Other}, C#ewm.debug, run, 0)
     end.
 
 %%-----------------------------------------------------------------------------

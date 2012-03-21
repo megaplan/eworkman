@@ -1,126 +1,26 @@
-The config is a list of {key, value} tuples (the value can be a list itself).
-To change the default values one can use the '-config' parameter at
-the release start.
-
-The list can contain the following sections:
-
-- rabbit
-- mnesia
-- kernel
-- sasl
-- ejobman
-  * rabbit
-  * debug
-  * handler
-  * log
 - eworkman
+  * local_config
+  * apps
+  * pid_file
   * web_server_opts
   * pools
   * log
   * debug
 
+local_config
+------------
+config file that is read in the beginning and its parameters override
+parameters from app.config. String.
 
-Rabbit
-======
+apps
+----
+list of process names to send a reload config signal on call
+eworkman_handler:config_reload. Every item is a tuple with app_name
+and a list of process names which will be sent the signal.
 
-This section may contain any parameters mentioned in rabbit.app. See rabbit.app
-for the reference.
-
-
-Mnesia
-======
-
-This section contains the parameters for mnesia db. See mnesia documentation
-for the reference.
-
-
-Kernel
-======
-
-This section contains the parameters for kernel app. See kernel app
-documentation for the reference.
-
-
-Sasl
-====
-
-This section contains the parameters for sasl app. See sasl app documentation
-for the reference.
-
-
-Ejobman
-=======
-
-rabbit
-------
-
-The 'rabbit' section contains AMQP connection parameters.
-The parameters:
-  port - broker's port. Integer. Default: 5672
-  host - broker's host. Atom. Default: '127.0.0.1'
-  user - username to use in rabbit-mq connection. Binary. Default: <<"guest">>
-  password - password to use in rabbit-mq connection. Binary. Default:
-  <<"guest">>
-  vhost - virtual host to use in rabbit-mq connection. Binary. Default: <<"/">>
-  exchange - exchange to use in rabbit-mq connection. Binary. Default:
-  <<"ejobman">>
-  exchange_type - exchange type to use in rabbit-mq connection. Binary.
-  Default: <<"topic">>
-  queue - queue to use in rabbit-mq connection. Binary. Default:
-  <<"test_queue">>
-  routing_key - routing key to use in rabbit-mq connection. Binary. Default:
-  <<"new">>
-
-debug
------
-
-The 'debug' section keeps parameters for ejobman. The section
-is a list of {key, value} tuples, where the key is an atom and the value
-is an integer. The bigger value is, the more verbose debug logs (and
-the slower the erlang VM works). You are warned.
-The possible keys:
-  config - config related information
-  run - runtime information
-
-handler
--------
-
-The 'handler' section keeps parameters for ejobman_handler. The section
-contains the following items:
-
-url_rewrite - list of rewrite items. Every rewrite item can contain
-the following:
-  src_type - type of src_host_part. Optional. Possible values: regex, none.
-  Default: none
-  src_host_part - string or regex the input host (host only!) is matched
-  against. String. No default
-  dst_host_part - replacement for the source host (host only!). String.
-  The source host is used if dst_host_part is undefined. No default
-  dst_host_hdr - string to be used as "Host" header. String. No default
-
-max_children - the max number of disposable children. Integer. Default: 32767
-
-debug - a list of {key, value} tuples, where the key is an atom and the value
-is an integer. The bigger value is, the more verbose debug logs (and the slower
-the erlang VM works, thanks to error_logger). You are warned.
-The possible keys:
-  config - config related information
-  run - runtime information
-  http - web related information
-
-log
----
-The 'log' section contains parameters that are used by ejobman_receiver
-to setup external logfile. If there is no log parameter then no attempt
-to setup the logfile is done. It's better to setup only one of
-ejobman and eworkman log parameters.
-The parameters:
-  log - the value is a directory name and the beginning part of a filename.
-  String. Default: "/var/log/erpher/ejm"
-
-
-Eworkman
-========
+pid_file
+--------
+file to write erlang VM pid into. String.
 
 web_server_opts
 ---------------
@@ -152,7 +52,7 @@ tuples. The pool item can contain the following items:
     eworkman_handler restarts the worker. Integer.
     Default: 86400
   worker - list of parameters for a worker. Possible keys:
-    name - string to be used for spawning. String. No default.
+    name - command for spawning. String. No default.
     debug - list of debug items ({key, value} tuples as usual). Possible keys:
       run - runtime information
 
@@ -170,8 +70,7 @@ log_rotate
 ----------
 Rotate interval for logs. Atom. The log file is rotated at the beginning of
 a time interval. E.g.: for 'day' it would be 00:00:00.
-Possible values: minute, hour, day, month.
-
+Possible values: minute, hour, day, {dow, 0..7}, month, year, never.
 
 debug
 -----
@@ -183,4 +82,4 @@ the slower the erlang VM works). You are warned.
 The possible keys:
   config - config related information
   run - runtime information
-
+  worker - worker spawning
